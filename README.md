@@ -42,6 +42,15 @@ En este cuaderno ajusto las tasas de transmisión y remoción del SIR y la dispe
 
 Uso **12 cadenas**, con **10 000 pasos de calentamiento** y **100 000 estados conservados por cadena**, y fijo la **semilla 101**. Los datos están incluidos en el cuaderno y sus fuentes se identifican al final. El ajuste describe la evolución general del brote; también señalo la sobreestimación de los últimos días y los conteos negativos que puede generar el supuesto de observación normal.
 
+### 5. Movimiento browniano con deriva
+
+En este cuaderno calculo la probabilidad de que un movimiento browniano con deriva tome valores entre **1 y 3 al tiempo 4**. Desarrollo la solución con la distribución normal y la comparo con una estimación por simulación. Represento 30 trayectorias con la franja del intervalo y la media teórica, y comparo el histograma de los valores finales con su densidad normal.
+
+- [Ver el notebook en GitHub](notebooks/Browniano_deriva_probabilidad_t4.ipynb).
+- [Abrir el notebook en Google Colab](https://colab.research.google.com/github/Mar9718/Simulacion-II/blob/main/notebooks/Browniano_deriva_probabilidad_t4.ipynb).
+
+Uso **deriva 0.6**, **parámetro de varianza 0.25** y **100 000 trayectorias**, con **10 000 pasos por trayectoria** y **semilla 42**. Obtengo una probabilidad analítica de **0.6449902230** y una estimación de **0.64377**. Los gráficos reutilizan la misma simulación; la probabilidad corresponde al valor final del proceso.
+
 ## Ejecución
 
 Trabajo con **Python y NumPy**. Para las gráficas de Metropolis-Hastings en dos dimensiones uso **Pillow**; en la caminata sobre el grafo uso **Matplotlib** y calculo las combinaciones con **SciPy**.
@@ -49,6 +58,15 @@ Trabajo con **Python y NumPy**. Para las gráficas de Metropolis-Hastings en dos
 En el SIR con Metropolis-Hastings uso **SciPy** para resolver las ecuaciones, **pandas** para las tablas y **Matplotlib** para las gráficas.
 
 Ejecuto las celdas de arriba hacia abajo, empezando con un kernel limpio. Las gráficas y los resultados están integrados en los notebooks; también incluyo sus enlaces de **Google Colab**.
+
+Para el movimiento browniano utilicé **Python 3.12**, **NumPy 2.5.3**, **SciPy 1.18.1**, **Matplotlib 3.11.2** y **Numba 0.68.0**. En un entorno virtual activo con Python 3.12, instalo las bibliotecas y abro JupyterLab:
+
+```bash
+python -m pip install numpy==2.5.3 scipy==1.18.1 matplotlib==3.11.2 numba==0.68.0 jupyterlab
+python -m jupyterlab
+```
+
+Abro `notebooks/Browniano_deriva_probabilidad_t4.ipynb`. Defino los parámetros una sola vez y uso `numero_a_graficar` para elegir cuántas trayectorias muestro. Comprobé la ejecución completa desde un kernel limpio en Jupyter. La ejecución en Colab no se ha verificado.
 
 Para el SIR con PyMC utilicé **Python 3.12 y PyMC 5.25.1**. Registro las versiones de las dependencias directas en [requirements-sir.txt](requirements-sir.txt). En un entorno virtual activo con Python 3.12, instalo esas bibliotecas y abro JupyterLab desde la carpeta del repositorio:
 
