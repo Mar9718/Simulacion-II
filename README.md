@@ -51,9 +51,20 @@ En este cuaderno calculo la probabilidad de que un movimiento browniano con deri
 
 Uso **deriva 0.6**, **parámetro de varianza 0.25** y **100 000 trayectorias**, con **10 000 pasos por trayectoria** y **semilla 42**. Obtengo una probabilidad analítica de **0.6449902230** y una estimación de **0.64377**. Los gráficos reutilizan la misma simulación; la probabilidad corresponde al valor final del proceso.
 
+### 6. Integral estocástica
+
+En este cuaderno desarrollo la media y la varianza de $\int_0^t W_s^2\,ds$ y comparo los resultados con una simulación para $t=1$. Incluyo el ejemplo de una trayectoria, el histograma de las integrales y la comparación de los momentos con sus valores teóricos.
+
+- [Ver el notebook en GitHub](notebooks/S2_Actividad_2_Ejercicio_2_Integral_estocastica.ipynb).
+- [Abrir el notebook en Google Colab](https://colab.research.google.com/github/Mar9718/Simulacion-II/blob/main/notebooks/S2_Actividad_2_Ejercicio_2_Integral_estocastica.ipynb).
+
+Uso **100 000 trayectorias**, **1000 subintervalos** y **semilla 42**.
+
 ## Ejecución
 
 Trabajo con **Python y NumPy**. Para las gráficas de Metropolis-Hastings en dos dimensiones uso **Pillow**; en la caminata sobre el grafo uso **Matplotlib** y calculo las combinaciones con **SciPy**.
+
+Para la actividad de integral estocástica uso **NumPy**, **Matplotlib**, **Numba** e **IPython**.
 
 En el SIR con Metropolis-Hastings uso **SciPy** para resolver las ecuaciones, **pandas** para las tablas y **Matplotlib** para las gráficas.
 
