@@ -1,0 +1,77 @@
+{
+  "fecha_del_avance": "2026-11-26",
+  "plataforma_resultados": "AnyLogic 8.9.10 Personal Learning Edition",
+  "java_version": "17.0.9",
+  "configuraciones": [
+    {
+      "configuracion": "interior_1000",
+      "D_mm": 1000,
+      "inicio": "uniforme en el interior",
+      "id_sesion": "piloto_13200428210619069794",
+      "revision": null,
+      "archivos_originales_sha256": {
+        "cavidades.csv": "7c0d3bc0ae7e5e7da98961f43bcee4de7a353a3f14eebc9b8e9254109b577033",
+        "pares.csv": "571a10da4435ab53d6b9c3e2a581bf993d49cbe015f30f73197744582ede5040",
+        "resumen_repartos.csv": "40a0d93acebd9b6a71a9d72512648bee998fa4dbe85a8ed9266d92a417d329ff",
+        "semillas.csv": "f365009e27757e757468fa5cd32e840b09f189e24eb4de17a63abdf4e703fcd9"
+      }
+    },
+    {
+      "configuracion": "entrada_5000",
+      "D_mm": 5000,
+      "inicio": "uniforme en la entrada centrada del borde inferior",
+      "id_sesion": "interactivo_17202165414256589681",
+      "revision": 0,
+      "archivos_originales_sha256": {
+        "cavidades.csv": "d431897b28f93f443b7d321cf19bf8410169c8720c5bbeedc778256409232577",
+        "pares.csv": "34b131c9f7b847257732556ed7db03bbd6da6bcf771dfca6ffd479520078656b",
+        "resumen_repartos.csv": "b341816944e6e6b7c34afd376898b3e82260ec9e5224a041a2894006b064d8ba",
+        "semillas.csv": "8ce1e3f45f8bc7faebf9a6bc47376b2bd8ed7e7c3a3e639774ef96ff69cf2297"
+      }
+    }
+  ],
+  "areas_mm2": {
+    "pequena": 875,
+    "grande": 1750
+  },
+  "dimensiones_mm": {
+    "pequena": [
+      "25",
+      "35"
+    ],
+    "grande": [
+      "25*sqrt(2)",
+      "35*sqrt(2)"
+    ]
+  },
+  "entrada_5000": {
+    "ancho_pequena_mm": "1",
+    "ancho_grande_mm": "sqrt(2)",
+    "borde": "Y=alto",
+    "ubicacion": "centrada en X",
+    "uso": "punto inicial uniforme por visita; reflectante durante el recorrido"
+  },
+  "paso_direccion_mm": 1,
+  "regla_movimiento": "angulo nuevo uniforme continuo en [0,2*pi) por paso; reflexion especular con subtramos",
+  "generador": "java.util.Random",
+  "derivacion_semilla": "id=20261126+100000*t+100*p+10*c+v para los cinco pares iniciales; z=id+0x9E3779B97F4A7C15; z=(z^(z>>>30))*0xBF58476D1CE4E5B9; z=(z^(z>>>27))*0x94D049BB133111EB; semilla=z^(z>>>31), long64",
+  "identificadores_pares_adicionales": "(1L<<48)|((long)t<<40)|((long)p<<8)|((long)c<<4)|v para p>=6, misma mezcla64",
+  "orden_extracciones": "dos uniformes de posicion y despues angulos; en entrada_5000 el segundo uniforme se consume sin determinar Y",
+  "seleccion_principal": "primeros cinco pares por reparto; en la sesion interactiva, revision cero",
+  "seleccion_referencias": "primer par de cada reparto fijado antes de observar resultados",
+  "adicionales": "pares6y7 de25/75, conservados aparte; no se agregan a la comparacion principal",
+  "comparacion": "cambian distancia e inicio; no identifica el efecto aislado de D",
+  "modelo_actual": {
+    "nombre": "Exploradora3D_Interactivo",
+    "sha256": "d08d36237a04f114c5ea0bc5ef8f8798996176890793725ce7020011f982c5a2"
+  },
+  "fuentes_graficas": "tablas exportadas de AnyLogic; coordenadas originales seleccionadas para los recorridos de referencia",
+  "copia_entrega": {
+    "archivo": "modelo_anylogic/Exploradora3D_Interactivo.alp",
+    "sha256": "6d0a438885d60a1c2bc35e8235c061dfd14c2566e6eb1cac7374aa4a34415639",
+    "cambios": "ruta relativa de salida, registro relativo de ubicación y comentarios de coordinación retirados; lógica científica conservada",
+    "uso": "entrega docente en Simulación II",
+    "destino_resultados": "resultados/interactivo_<identificador>, relativo a user.dir",
+    "comprobacion": "compilación y escritura portable; GUI del original comprobada, GUI de la copia portable en equipo receptor pendiente"
+  }
+}

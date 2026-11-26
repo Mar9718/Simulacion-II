@@ -1,0 +1,2 @@
+casos_posibles,finitos_en_ambos_regimenes,excluidos_por_estimacion_no_finita,error_disminuye,error_aumenta,error_igual,alcance
+20,10,10,8,2,0,comparacion_descriptiva_cambian_distancia_y_arranque

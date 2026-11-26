@@ -1,0 +1,11 @@
+id_serie,reparto,par,id_pequena,id_grande,N_pequena,N_grande,A_estimada_pequena_mm2,A_estimada_grande_mm2,estado_estimacion_pequena,estado_estimacion_grande,clasificacion,estado
+interactivo_17202165414256589681,25/75,1,t0_p1_pequena,t0_p1_grande,4926,2292,605.7968296737795,1301.9874271261071,finita,finita,acierto,completo
+interactivo_17202165414256589681,25/75,2,t0_p2_pequena,t0_p2_grande,3841,455,776.9214222788434,6558.582819720963,finita,finita,acierto,completo
+interactivo_17202165414256589681,25/75,3,t0_p3_pequena,t0_p3_grande,1506,2741,1981.5107456660273,1088.7103914531333,finita,finita,inversion,completo
+interactivo_17202165414256589681,25/75,4,t0_p4_pequena,t0_p4_grande,6146,686,485.5442861980211,4350.0804416516585,finita,finita,acierto,completo
+interactivo_17202165414256589681,25/75,5,t0_p5_pequena,t0_p5_grande,9399,1476,317.49709362411295,2021.7853543177762,finita,finita,acierto,completo
+interactivo_17202165414256589681,50/50,1,t1_p1_pequena,t1_p1_grande,3099,54,1283.9217738939606,73682.84402402563,finita,finita,acierto,completo
+interactivo_17202165414256589681,50/50,2,t1_p2_pequena,t1_p2_grande,4780,1376,832.4003299785321,2891.623239314959,finita,finita,acierto,completo
+interactivo_17202165414256589681,50/50,3,t1_p3_pequena,t1_p3_grande,2116,1604,1880.3750365299545,2480.5944995619598,finita,finita,acierto,completo
+interactivo_17202165414256589681,50/50,4,t1_p4_pequena,t1_p4_grande,4937,5080,805.9294262299744,783.2428301766502,finita,finita,inversion,completo
+interactivo_17202165414256589681,50/50,5,t1_p5_pequena,t1_p5_grande,4085,4417,974.020459558723,900.8090507804809,finita,finita,inversion,completo

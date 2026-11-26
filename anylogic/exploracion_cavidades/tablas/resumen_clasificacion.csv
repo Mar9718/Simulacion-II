@@ -1,0 +1,5 @@
+regimen,reparto,pares_completos,aciertos,inversiones,empates,proporcion_aciertos,proporcion_inversiones,proporcion_empates
+interior_1000,25/75,5,2,0,3,0.4,0.0,0.6
+interior_1000,50/50,5,4,1,0,0.8,0.2,0.0
+entrada_5000,25/75,5,4,1,0,0.8,0.2,0.0
+entrada_5000,50/50,5,3,2,0,0.6,0.4,0.0

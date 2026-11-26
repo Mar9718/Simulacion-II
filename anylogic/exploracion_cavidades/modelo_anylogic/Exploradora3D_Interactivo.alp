@@ -1,0 +1,1438 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+*************************************************
+	         AnyLogic Project File
+*************************************************
+-->
+<AnyLogicWorkspace WorkspaceVersion="1.9" AnyLogicVersion="8.9.10.202609241721" AlpVersion="8.9.10">
+<Model>
+	<Id>1795718642161</Id>
+	<Name><![CDATA[Exploradora3D_Interactivo]]></Name>
+	<EngineVersion>6</EngineVersion>
+	<JavaPackageName><![CDATA[exploradora3dinteractivo]]></JavaPackageName>
+	<ModelTimeUnit><![CDATA[Second]]></ModelTimeUnit>
+	<Folders>
+	</Folders>
+	<ActiveObjectClasses>
+		<!--   =========   Active Object Class   ========  -->
+		<ActiveObjectClass>
+			<Id>1795718642162</Id>
+			<Name><![CDATA[Main]]></Name>
+			<AdditionalClassCode><![CDATA[// AnyLogic 8.9.10 PLE. Cálculo por avance, reproducción independiente.
+private static final String VERSION_PILOTO = "Exploradora3D_interactivo_b10_D5000_Entrada";
+private static final String PLATAFORMA_PILOTO = "AnyLogic";
+private static final String PREGUNTA_PILOTO = "Si la exploradora recorre la misma distancia total en dos visitas, ¿cambia la frecuencia con la que el conteo de cruces le permite distinguir la cavidad pequeña de la grande según cómo reparta esa distancia?";
+private static final double ESCALA_PILOTO = 10.0;
+private static final int PARES_PILOTO = 5;
+private static final double DISTANCIA_TOTAL_PILOTO_MM = 5000.0;
+private static final int PASOS_POR_TICK_PILOTO = 250;
+private final java.util.ArrayList<java.util.ArrayList<EjecucionPiloto[]>> ejecucionesPiloto = new java.util.ArrayList<>();
+private java.nio.file.Path carpetaPiloto;
+private int revisionPiloto;
+private final java.util.HashSet<Long> identificadoresPiloto = new java.util.HashSet<>();
+private final java.util.HashSet<Long> semillas48Piloto = new java.util.HashSet<>();
+private StringBuilder semillasRegistroPiloto, flujosRegistroPiloto;
+private long duracionCalculoPilotoNs;
+
+private static final class EjecucionPiloto {
+    int tratamiento, par, cavidad;
+    String id, estado = "en_curso", diagnostico = "", estadoEstimacion = "pendiente";
+    double ancho, alto, areaReal, lObjetivo, sObjetivo;
+    long semilla1, semilla2;
+    MotorPiloto.Recorrido v1, v2;
+    DetectorEncuentrosGenerales.Resultado conteo;
+    Double estimacion;
+    boolean completa() { return "completada".equals(estado); }
+}
+
+private String repartoPiloto(int t) { return t == 0 ? "25/75" : "50/50"; }
+private String cavidadPiloto(int c) { return c == 0 ? "pequena" : "grande"; }
+private String idSeriePiloto() { return carpetaPiloto.getFileName().toString(); }
+
+private void filaPiloto(StringBuilder salida, Object... valores) {
+    for (int i = 0; i < valores.length; i++) {
+        if (i > 0) salida.append(',');
+        Object v = valores[i];
+        String s = v == null || v instanceof Double && !Double.isFinite((Double) v) ? "" : String.valueOf(v);
+        if (s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains("\r"))
+            s = "\"" + s.replace("\"", "\"\"") + "\"";
+        salida.append(s);
+    }
+    salida.append('\n');
+}
+
+private void escribirPiloto(String nombre, CharSequence datos) {
+    try { java.nio.file.Files.writeString(carpetaPiloto.resolve(nombre), datos); }
+    catch (java.io.IOException e) { throw new RuntimeException("No se pudo guardar " + nombre, e); }
+}
+
+private void iniciarPilotoEstimaciones() {
+    long inicio = System.nanoTime();
+    try {
+        java.nio.file.Path base = java.nio.file.Paths.get(System.getProperty("user.dir"), "resultados");
+        java.nio.file.Files.createDirectories(base);
+        carpetaPiloto = java.nio.file.Files.createTempDirectory(base, "interactivo_");
+    } catch (java.io.IOException e) { throw new RuntimeException("No se pudo crear carpeta interactiva", e); }
+    revisionPiloto=0;
+    ejecucionesPiloto.clear(); identificadoresPiloto.clear(); semillas48Piloto.clear();
+    ejecucionesPiloto.add(new java.util.ArrayList<EjecucionPiloto[]>());
+    ejecucionesPiloto.add(new java.util.ArrayList<EjecucionPiloto[]>());
+    semillasRegistroPiloto=new StringBuilder("id_serie,version_modelo,reparto,par,cavidad,visita,semilla,identificador_flujo\n");
+    flujosRegistroPiloto=new StringBuilder("id_sesion,id_serie,revision_alta,reparto,par,cavidad,visita,identificador_flujo,semilla,estado_inicial_random48\n");
+    // Los mismos 40 flujos históricos quedan fijados antes de generar recorridos.
+    for(int t=0;t<2;t++)for(int p=1;p<=PARES_PILOTO;p++)registrarFlujosParPiloto(t,p);
+    for(int t=0;t<2;t++)for(int p=1;p<=PARES_PILOTO;p++) {
+        EjecucionPiloto[] par={crearEjecucionPiloto(t,p,0),crearEjecucionPiloto(t,p,1)};
+        for(EjecucionPiloto e:par)calcularEjecucionPiloto(e);
+        ejecucionesPiloto.get(t).add(par);
+    }
+    duracionCalculoPilotoNs=System.nanoTime()-inicio;
+    guardarRevisionPiloto();
+    prepararEscenaPiloto();
+    mostrarParPiloto(0,0);
+}
+
+private int revisionPiloto() { return revisionPiloto; }
+private String carpetaPiloto() { return carpetaPiloto.toString(); }
+private EjecucionPiloto ejecucionPiloto(int t,int pIndex,int c) {
+    return ejecucionesPiloto.get(t).get(pIndex)[c];
+}
+private int numeroParesPiloto(int t) { return ejecucionesPiloto.get(t).size(); }
+private int[] conteosPiloto(int t) {
+    int[] conteos=new int[4];
+    for(EjecucionPiloto[] par:ejecucionesPiloto.get(t)) {
+        String c=clasificacionPiloto(par[0],par[1]);
+        conteos[c.equals("acierto")?0:c.equals("inversion")?1:c.equals("empate")?2:3]++;
+    }
+    return conteos;
+}
+private void registrarFlujosParPiloto(int t,int p) {
+    for(int c=0;c<2;c++)for(int v=1;v<=2;v++) {
+        long id=MotorPiloto.identificadorFlujo(t,p,c,v),seed=MotorPiloto.semilla(t,p,c,v);
+        long estado48=(seed^0x5DEECE66DL)&((1L<<48)-1);
+        if(identificadoresPiloto.contains(id)||semillas48Piloto.contains(estado48))
+            throw new IllegalStateException("Colision de flujo o estado Random48: t="+t+",par="+p+",c="+c+",v="+v+",id="+id+",seed="+seed+",estado48="+estado48);
+        identificadoresPiloto.add(id);semillas48Piloto.add(estado48);
+        filaPiloto(semillasRegistroPiloto,idSeriePiloto(),VERSION_PILOTO,repartoPiloto(t),p,cavidadPiloto(c),v,seed,id);
+        filaPiloto(flujosRegistroPiloto,idSeriePiloto(),idSeriePiloto(),revisionPiloto,repartoPiloto(t),p,cavidadPiloto(c),v,id,seed,estado48);
+    }
+}
+private EjecucionPiloto crearEjecucionPiloto(int t,int p,int c) {
+    EjecucionPiloto e=new EjecucionPiloto();
+    e.tratamiento=t;e.par=p;e.cavidad=c;e.id="t"+t+"_p"+p+"_"+cavidadPiloto(c);
+    double escala=c==0?1:Math.sqrt(2.0);
+    e.ancho=25*escala;e.alto=35*escala;e.areaReal=c==0?875:1750;
+    e.lObjetivo=DISTANCIA_TOTAL_PILOTO_MM*(t==0?.25:.5);e.sObjetivo=DISTANCIA_TOTAL_PILOTO_MM-e.lObjetivo;
+    e.semilla1=MotorPiloto.semilla(t,p,c,1);e.semilla2=MotorPiloto.semilla(t,p,c,2);
+    return e;
+}
+private void calcularEjecucionPiloto(EjecucionPiloto e) {
+    try {
+        double escala=e.cavidad==0?1:Math.sqrt(2.0);
+        e.v1=MotorPiloto.generar(e.ancho,e.alto,e.lObjetivo,e.semilla1,escala);
+        e.v2=MotorPiloto.generar(e.ancho,e.alto,e.sObjetivo,e.semilla2,escala);
+        e.conteo=DetectorEncuentrosGenerales.contar(e.v1.puntos,e.v2.puntos);
+        if(!e.conteo.completa)throw new IllegalStateException(e.conteo.diagnostico);
+        e.estimacion=MotorPiloto.estimar(e.v1.longitudMm,e.v2.longitudMm,e.conteo.nEncuentros);
+        e.estadoEstimacion=e.estimacion==null?"sin_estimacion_finita_N0":"finita";e.estado="completada";
+    } catch(RuntimeException problema) { fallarEjecucionPiloto(e,problema); }
+}
+private void fallarEjecucionPiloto(EjecucionPiloto e,RuntimeException problema) {
+    e.estado="fallida";e.diagnostico=problema.getClass().getSimpleName()+": "+problema.getMessage();
+    e.estadoEstimacion="sin_estimacion_por_falla";e.estimacion=null;
+}
+private int agregarSimulacionPiloto(int t) {
+    if(t<0||t>1)throw new IllegalArgumentException("Reparto permitido: 0 o 1");
+    long inicio=System.nanoTime();
+    int p=numeroParesPiloto(t)+1; revisionPiloto++;
+    EjecucionPiloto[] par={crearEjecucionPiloto(t,p,0),crearEjecucionPiloto(t,p,1)};
+    try {
+        registrarFlujosParPiloto(t,p);
+        for(EjecucionPiloto e:par)calcularEjecucionPiloto(e);
+    } catch(RuntimeException problema) {
+        for(EjecucionPiloto e:par)fallarEjecucionPiloto(e,problema);
+    }
+    ejecucionesPiloto.get(t).add(par);
+    duracionCalculoPilotoNs+=System.nanoTime()-inicio;
+    guardarRevisionPiloto();
+    return p-1;
+}
+private void escribirConfiguracionPiloto() {
+    escribirPiloto("configuracion.txt", "plataforma=" + PLATAFORMA_PILOTO + "\nAnyLogic=8.9.10 PLE\nversion_modelo=" + VERSION_PILOTO
+        + "\nid_sesion=" + idSeriePiloto() + "\nid_serie_original=" + idSeriePiloto() + "\nrevision=" + revisionPiloto + "\ncorte_inmutable=cortes/corte_" + String.format(java.util.Locale.ROOT,"%04d",revisionPiloto) + "\nid_serie=" + idSeriePiloto() + "\nfecha_utc=" + java.time.Instant.now()
+        + "\njava_version=" + System.getProperty("java.version") + "\npregunta=" + PREGUNTA_PILOTO
+        + "\nareas_mm2=875,1750\ndimensiones_pequena_mm=25,35\ndimensiones_grande_mm=25*sqrt(2),35*sqrt(2)"
+        + "\nD_objetivo_mm=" + DISTANCIA_TOTAL_PILOTO_MM + "\nrepartos=25/75,50/50\nL_objetivo_mm=1250,2500\nS_objetivo_mm=3750,2500"
+        + "\npares_iniciales_por_reparto=5\npares_programados_25_75=" + numeroParesPiloto(0) + "\npares_programados_50_50=" + numeroParesPiloto(1) + "\npaso_direccion_mm=1\nangulo=uniforme_continuo_0_2pi_independiente_por_paso"
+        + "\narranque=uniforme_independiente_en_entrada_por_visita\nentrada_borde=Y_alto_centrada_en_X\nanchos_entrada_mm=1,sqrt(2)\nentrada_pequena_mm=x(12,13),y35\nentrada_grande_mm=x(12*sqrt(2),13*sqrt(2)),y35*sqrt(2)\nentrada_durante_visita=reflectante_sin_salida_anticipada\npared=reflexion_especular_con_subtramos"
+        + "\ngenerador=java.util.Random\nidentificador_flujo=par<=5:20261126+100000*t+100*p+10*c+v;par>=6:(1L<<48)|((long)t<<40)|((long)p<<8)|((long)c<<4)|v"
+        + "\nsemilla_efectiva=mix64(identificador_flujo);overflow_long_64bits;desplazamientos_logicos"
+        + "\nmix64=z=id+0x9E3779B97F4A7C15;z=(z^(z>>>30))*0xBF58476D1CE4E5B9;z=(z^(z>>>27))*0x94D049BB133111EB;retorno=z^(z>>>31)"
+        + "\nindices=t0_25/75_t1_50/50;p_desde1_sin_reemplazo;c0pequena_c1grande;v1a2"
+        + "\norden_extracciones=uX_entrada,uY_consumido_sin_uso_en_Y,angulos_pasos;uniforme_reextrae_si_cero"
+        + "\nN=contactos_puntuales_unicos_por_episodio_avanceV2\nC=clasificacion_regional_separada_nullable"
+        + "\nN_incluye=interior,vertice,extremo,inicial,terminal,multirrama\nsolapamiento_positivo=falla_sin_reemplazo"
+        + "\nestimador=2*L_real*S_real/(pi*N);solo_L_S_N\nN0=null_sin_estimacion_finita_N0_par_completo"
+        + "\nclasificacion_par=N_pequena_mayor_acierto_menor_inversion_igual_empate"
+        + "\ntolerancia_control_suma_mm=1e-8\ntolerancia_fisica_detector=ninguna"
+        + "\nz_fisico_mm=0\nescala_px_por_mm=10\noffset_visual_x_px=20,330\noffset_visual_y_px=70"
+        + "\nreubicacion_entre_visitas=no_es_tramo_ni_distancia\nreferencias_visualizadas=par_seleccionado_en_UI"
+        + "\nreproduccion=velocidad_UI_variable_solo_presentacion_no_velocidad_biologica\n");
+
+}
+private void guardarRevisionPiloto() {
+    escribirConfiguracionPiloto();
+    escribirPiloto("semillas.csv",semillasRegistroPiloto);
+    escribirPiloto("flujos_efectivos.csv",flujosRegistroPiloto);
+    exportarPiloto();
+    escribirPiloto("estado_ejecucion.txt","terminada\nid_sesion="+idSeriePiloto()+"\nrevision="+revisionPiloto
+        +"\npares_completos_25_75="+completosPiloto(0)+"\npares_completos_50_50="+completosPiloto(1)
+        +"\nduracion_calculo_ns="+duracionCalculoPilotoNs+"\ncarpeta="
+        +java.nio.file.Paths.get("resultados",idSeriePiloto()).toString().replace(java.io.File.separatorChar,'/')+"\n");
+    try {
+        java.nio.file.Path cortes=carpetaPiloto.resolve("cortes");java.nio.file.Files.createDirectories(cortes);
+        java.nio.file.Path corte=cortes.resolve(String.format(java.util.Locale.ROOT,"corte_%04d",revisionPiloto));
+        java.nio.file.Files.createDirectory(corte); // Falla si ya existe: nunca sobrescribe un corte.
+        for(String nombre:new String[]{"configuracion.txt","semillas.csv","flujos_efectivos.csv","trayectorias.csv","eventos.csv","cavidades.csv","pares.csv","resumen_repartos.csv","estado_ejecucion.txt"})
+            java.nio.file.Files.copy(carpetaPiloto.resolve(nombre),corte.resolve(nombre));
+    } catch(java.io.IOException e) { throw new RuntimeException("No se pudo conservar el corte inmutable de revisión "+revisionPiloto,e); }
+}
+
+private Integer nPiloto(EjecucionPiloto e) { return e.completa()?e.conteo.nEncuentros:null; }
+private String clasificacionPiloto(EjecucionPiloto a, EjecucionPiloto b) {
+    if (!a.completa() || !b.completa()) return "incompleto";
+    return a.conteo.nEncuentros>b.conteo.nEncuentros?"acierto":a.conteo.nEncuentros<b.conteo.nEncuentros?"inversion":"empate";
+}
+private int completosPiloto(int t) {
+    int[] n=conteosPiloto(t);return n[0]+n[1]+n[2];
+}
+
+private void exportarPiloto() {
+    StringBuilder puntos=new StringBuilder("id_serie,id_cavidad,reparto,par,cavidad,visita,semilla,indice_punto,paso_direccion,tipo_punto,x_mm,y_mm,z_mm,tramo_mm,avance_visita_mm,angulo_paso_rad\n");
+    StringBuilder eventos=new StringBuilder("id_serie,id_cavidad,reparto,par,cavidad,episodio,x_mm,y_mm,avance_v2_mm,tramo_v2,parametro_v2,tramos_v1,localizacion,clase,C_region,N_aporte\n");
+    StringBuilder cavidades=new StringBuilder("id_serie,id_cavidad,reparto,par,cavidad,ancho_mm,alto_mm,area_real_mm2,semilla_v1,semilla_v2,L_objetivo_mm,S_objetivo_mm,L_real_mm,S_real_mm,N_encuentros,C_regiones,cruces_clasificados,toques_clasificados,sin_clase,A_estimada_mm2,estado_estimacion,error_mm2,error_relativo,estado,diagnostico\n");
+    StringBuilder pares=new StringBuilder("id_serie,reparto,par,id_pequena,id_grande,N_pequena,N_grande,A_estimada_pequena_mm2,A_estimada_grande_mm2,estado_estimacion_pequena,estado_estimacion_grande,clasificacion,estado\n");
+    StringBuilder resumen=new StringBuilder("id_serie,reparto,pares_programados,pares_completos,pares_fallidos,aciertos,inversiones,empates,proporcion_aciertos,proporcion_inversiones,proporcion_empates,estimaciones_finitas_pequena,estimaciones_finitas_grande,N0_pequena,N0_grande\n");
+    for(int t=0;t<2;t++) {
+        int aciertos=0,inversiones=0,empates=0;
+        int[] finitas={0,0},ceros={0,0};
+        for(int p=0;p<numeroParesPiloto(t);p++) {
+            EjecucionPiloto a=ejecucionPiloto(t,p,0), b=ejecucionPiloto(t,p,1);
+            String clase=clasificacionPiloto(a,b);
+            if(clase.equals("acierto"))aciertos++;
+            if(clase.equals("inversion"))inversiones++;
+            if(clase.equals("empate"))empates++;
+            filaPiloto(pares,idSeriePiloto(),repartoPiloto(t),p+1,a.id,b.id,nPiloto(a),nPiloto(b),a.estimacion,b.estimacion,
+                a.estadoEstimacion,b.estadoEstimacion,clase,clase.equals("incompleto")?"incompleto":"completo");
+            for(EjecucionPiloto e:new EjecucionPiloto[]{a,b}) {
+                if(e.estimacion!=null)finitas[e.cavidad]++;
+                if(e.completa()&&e.conteo.nEncuentros==0)ceros[e.cavidad]++;
+                filaPiloto(cavidades,idSeriePiloto(),e.id,repartoPiloto(t),e.par,cavidadPiloto(e.cavidad),e.ancho,e.alto,e.areaReal,
+                    e.semilla1,e.semilla2,e.lObjetivo,e.sObjetivo,e.v1==null?null:e.v1.longitudMm,e.v2==null?null:e.v2.longitudMm,
+                    nPiloto(e),e.completa()?e.conteo.cRegiones:null,e.completa()?e.conteo.crucesClasificados:null,
+                    e.completa()?e.conteo.toquesClasificados:null,e.completa()?e.conteo.sinClase:null,e.estimacion,e.estadoEstimacion,
+                    e.estimacion==null?null:e.estimacion-e.areaReal,e.estimacion==null?null:(e.estimacion-e.areaReal)/e.areaReal,
+                    e.estado,e.diagnostico);
+                for(int v=1;v<=2;v++) {
+                    MotorPiloto.Recorrido r=v==1?e.v1:e.v2;
+                    if(r==null)continue;
+                    for(int i=0;i<r.puntos.size();i++) {
+                        double[] q=r.puntos.get(i);
+                        double tramo=i==0?0:r.avances.get(i)-r.avances.get(i-1);
+                        filaPiloto(puntos,idSeriePiloto(),e.id,repartoPiloto(t),e.par,cavidadPiloto(e.cavidad),v,r.semilla,i,
+                            r.pasos.get(i),r.tipos.get(i),q[0],q[1],0,tramo,r.avances.get(i),r.angulos.get(i));
+                    }
+                }
+                if(e.conteo!=null)for(DetectorEncuentrosGenerales.Evento evento:e.conteo.eventos)
+                    filaPiloto(eventos,idSeriePiloto(),e.id,repartoPiloto(t),e.par,cavidadPiloto(e.cavidad),evento.episodio,
+                        evento.xMm,evento.yMm,evento.avanceMm,evento.indiceTramoV2,evento.parametroV2,
+                        java.util.Arrays.toString(evento.tramosV1),evento.localizacion,evento.clase,evento.cRegion,e.completa()?1:null);
+            }
+        }
+        int r=completosPiloto(t);
+        filaPiloto(resumen,idSeriePiloto(),repartoPiloto(t),numeroParesPiloto(t),r,numeroParesPiloto(t)-r,aciertos,inversiones,empates,
+            r==0?null:aciertos/(double)r,r==0?null:inversiones/(double)r,r==0?null:empates/(double)r,finitas[0],finitas[1],ceros[0],ceros[1]);
+    }
+    escribirPiloto("trayectorias.csv",puntos); escribirPiloto("eventos.csv",eventos);
+    escribirPiloto("cavidades.csv",cavidades); escribirPiloto("pares.csv",pares); escribirPiloto("resumen_repartos.csv",resumen);
+}
+
+
+
+// Interfaz interactiva: los cambios de presentación no generan ni cuentan recorridos.
+private final double[] offsetXPiloto={20,330};
+private static final double OFFSET_Y_PILOTO=70;
+private final com.anylogic.engine.presentation.ShapePolyLine[][] trazosPiloto=new com.anylogic.engine.presentation.ShapePolyLine[2][2];
+private final com.anylogic.engine.presentation.ShapeOval[] cuerposPiloto=new com.anylogic.engine.presentation.ShapeOval[2];
+private final com.anylogic.engine.presentation.ShapeText[] resultadosCavidadPiloto=new com.anylogic.engine.presentation.ShapeText[2];
+private final int[] parVisualPorRepartoPiloto={0,0};
+private int repartoVisualPiloto,parVisualPiloto,visitaVisualPiloto,pasoVisualPiloto;
+private int velocidadVisualPiloto=1;
+private boolean reproduciendoPiloto,actualizandoInterfazPiloto;
+private com.anylogic.engine.presentation.ShapeButton botonNuevaSimulacionPiloto,botonVelocidadPiloto;
+private static final int CAPACIDAD_TRAZO_PILOTO=15001; // Hasta tres subtramos por paso de 1 mm en estos pisos.
+
+private com.anylogic.engine.presentation.ShapeText textoPiloto(double x,double y,String texto,int tamano) {
+    com.anylogic.engine.presentation.ShapeText s=new com.anylogic.engine.presentation.ShapeText(
+        com.anylogic.engine.presentation.ShapeDrawMode.SHAPE_DRAW_2D,true,x,y,0,0,java.awt.Color.DARK_GRAY,texto,
+        new java.awt.Font("SansSerif",java.awt.Font.PLAIN,tamano),com.anylogic.engine.presentation.TextAlignment.ALIGNMENT_LEFT);
+    presentation.add(s);return s;
+}
+private com.anylogic.engine.presentation.ShapeButton botonPiloto(double x,String texto,final Runnable accion) {
+    com.anylogic.engine.presentation.ShapeButton b=new com.anylogic.engine.presentation.ShapeButton(
+        presentation.getPresentable(),true,x,0,150,30,java.awt.Color.BLACK,true,
+        new java.awt.Font("SansSerif",java.awt.Font.PLAIN,14),texto) {
+        @Override public void action() { accion.run(); }
+    };
+    presentation.add(b);return b;
+}
+private void prepararEscenaPiloto() {
+    pisoCavidad.setVisible(false);exploradora_presentation.setVisible(false);
+    rotuloMedidas.setY(700);rotuloMedidas.setFont(new java.awt.Font("SansSerif",java.awt.Font.PLAIN,16));
+    for(int c=0;c<2;c++) {
+        EjecucionPiloto e=ejecucionPiloto(0,0,c);
+        presentation.add(new com.anylogic.engine.presentation.ShapeRectangle(
+            com.anylogic.engine.presentation.ShapeDrawMode.SHAPE_DRAW_2D3D,true,offsetXPiloto[c],OFFSET_Y_PILOTO,-2,0,
+            java.awt.Color.GRAY,new java.awt.Color(139,228,244),e.ancho*ESCALA_PILOTO,e.alto*ESCALA_PILOTO,2,1,
+            com.anylogic.engine.presentation.LineStyle.LINE_STYLE_SOLID));
+        textoPiloto(offsetXPiloto[c],38,c==0?"CAVIDAD PEQUEÑA · 25 × 35 mm":"CAVIDAD GRANDE · 25√2 × 35√2 mm",15);
+        textoPiloto(offsetXPiloto[c],56,"Área real: "+(c==0?875:1750)+" mm²",14);
+        double entrada=e.ancho/25;
+        presentation.add(new com.anylogic.engine.presentation.ShapeLine(
+            com.anylogic.engine.presentation.ShapeDrawMode.SHAPE_DRAW_2D3D,true,
+            offsetXPiloto[c]+(e.ancho-entrada)*ESCALA_PILOTO/2,OFFSET_Y_PILOTO+e.alto*ESCALA_PILOTO,
+            0.9,new java.awt.Color(20,130,70),entrada*ESCALA_PILOTO,0,0,4,0.5,
+            com.anylogic.engine.presentation.LineStyle.LINE_STYLE_SOLID));
+        textoPiloto(offsetXPiloto[c],OFFSET_Y_PILOTO+e.alto*ESCALA_PILOTO+14,
+            "Entrada: "+String.format(java.util.Locale.US,"%.2f",entrada)+" mm",14);
+        resultadosCavidadPiloto[c]=textoPiloto(offsetXPiloto[c],610,"",15);
+        cuerposPiloto[c]=new com.anylogic.engine.presentation.ShapeOval(
+            com.anylogic.engine.presentation.ShapeDrawMode.SHAPE_DRAW_2D3D,true,0,0,2,0,
+            java.awt.Color.BLACK,java.awt.Color.BLACK,5,3,2,0,com.anylogic.engine.presentation.LineStyle.LINE_STYLE_SOLID);
+        presentation.add(cuerposPiloto[c]);
+        for(int v=0;v<2;v++) {
+            trazosPiloto[c][v]=new com.anylogic.engine.presentation.ShapePolyLine(
+                com.anylogic.engine.presentation.ShapeDrawMode.SHAPE_DRAW_2D3D,true,offsetXPiloto[c],OFFSET_Y_PILOTO,0.7,
+                v==0?new java.awt.Color(35,90,190):new java.awt.Color(210,105,20),null,
+                CAPACIDAD_TRAZO_PILOTO,new double[CAPACIDAD_TRAZO_PILOTO],new double[CAPACIDAD_TRAZO_PILOTO],
+                new double[CAPACIDAD_TRAZO_PILOTO],false,0.5,1.2,com.anylogic.engine.presentation.LineStyle.LINE_STYLE_SOLID);
+            trazosPiloto[c][v].setNPoints(2);trazosPiloto[c][v].setVisible(false);presentation.add(trazosPiloto[c][v]);
+        }
+    }
+    botonPiloto(20,"Mostrar 25/75",()->mostrarParPiloto(0,parVisualPorRepartoPiloto[0]));
+    botonPiloto(190,"Mostrar 50/50",()->mostrarParPiloto(1,parVisualPorRepartoPiloto[1]));
+    botonPiloto(360,"Reproducir visitas",()->reiniciarReproduccionPiloto());
+    botonPiloto(530,"Ver final",()->mostrarParPiloto(repartoVisualPiloto,parVisualPiloto));
+    botonNuevaSimulacionPiloto=botonPiloto(770,"Nueva simulación",()->nuevaSimulacionDesdeBotonPiloto());
+    botonVelocidadPiloto=botonPiloto(940,"Velocidad ×1",()->cambiarVelocidadPiloto());
+    textoPiloto(770,560,"3D: izquierda pequeña · derecha grande\nAzul: visita 1 · naranja: visita 2 · verde: entrada",16);
+    textoPiloto(770,610,"Nueva simulación: un par para el reparto mostrado.\nDos visitas en cada cavidad; los contadores se acumulan.\nSerie inicial: cinco pares por reparto.",16);
+    window3d.setCamera(new com.anylogic.engine.presentation.Camera3D(350,1100,900,Math.atan2(900,780),-Math.PI/2),false);
+}
+private void moverCuerpoPiloto(int c,double[] punto) {
+    cuerposPiloto[c].setX(offsetXPiloto[c]+punto[0]*ESCALA_PILOTO);
+    cuerposPiloto[c].setY(OFFSET_Y_PILOTO+punto[1]*ESCALA_PILOTO);
+}
+private String numeroPiloto(Double n) {return n==null?"NA":String.format(java.util.Locale.US,"%.1f",n);}
+private void cargarTrazoPiloto(int c,int v,MotorPiloto.Recorrido r) {
+    com.anylogic.engine.presentation.ShapePolyLine linea=trazosPiloto[c][v];
+    if(r==null){linea.setVisible(false);return;}
+    if(r.puntos.size()>CAPACIDAD_TRAZO_PILOTO)throw new IllegalStateException("Capacidad visual de trazo insuficiente");
+    linea.setNPoints(CAPACIDAD_TRAZO_PILOTO);
+    for(int i=0;i<r.puntos.size();i++)linea.setPoint(i,r.puntos.get(i)[0]*ESCALA_PILOTO,r.puntos.get(i)[1]*ESCALA_PILOTO,0);
+    linea.setNPoints(r.puntos.size());linea.setVisible(true);
+}
+private void rotularPiloto(String progreso) {
+    EjecucionPiloto a=ejecucionPiloto(repartoVisualPiloto,parVisualPiloto,0),b=ejecucionPiloto(repartoVisualPiloto,parVisualPiloto,1);
+    for(int c=0;c<2;c++) {
+        EjecucionPiloto e=c==0?a:b;
+        resultadosCavidadPiloto[c].setText((c==0?"Pequeña":"Grande")+" · "+e.estado
+            +"\nN = "+nPiloto(e)+" · A estimada = "+numeroPiloto(e.estimacion)+" mm²"
+            +"\nL = "+numeroPiloto(e.v1==null?null:e.v1.longitudMm)+" · S = "+numeroPiloto(e.v2==null?null:e.v2.longitudMm)+" mm"
+            +"\n"+e.estadoEstimacion);
+    }
+    int[] cuentas=conteosPiloto(repartoVisualPiloto);int r=completosPiloto(repartoVisualPiloto);
+    String porcentaje=r==0?"NA":String.format(java.util.Locale.US,"%.1f",100.0*cuentas[0]/r)+"%";
+    rotuloMedidas.setText("D5000 · Reparto "+repartoPiloto(repartoVisualPiloto)+" · Par mostrado "+(parVisualPiloto+1)+" · "+progreso
+        +"\nSimulaciones: "+numeroParesPiloto(repartoVisualPiloto)+" intentadas · "+r+" completas · Aciertos: "+cuentas[0]+"/"+r+" = "+porcentaje
+        +" · Inversiones: "+cuentas[1]+" · Empates: "+cuentas[2]+" · Fallas: "+cuentas[3]
+        +"\nPar mostrado: "+clasificacionPiloto(a,b)+" · Ceros incluidos · Velocidad ×"+velocidadVisualPiloto+" sólo reproducción"
+        +"\nDatos: "+idSeriePiloto()+" · corte "+revisionPiloto()+" · "+(numeroParesPiloto(0))+" pares 25/75; "+numeroParesPiloto(1)+" pares 50/50");
+}
+private void mostrarParPiloto(int t,int p) {
+    if(p<0||p>=numeroParesPiloto(t))throw new IllegalArgumentException("Par visual fuera de rango");
+    repartoVisualPiloto=t;parVisualPiloto=p;parVisualPorRepartoPiloto[t]=p;reproduciendoPiloto=false;
+    for(int c=0;c<2;c++) {
+        EjecucionPiloto e=ejecucionPiloto(t,p,c);
+        cargarTrazoPiloto(c,0,e.v1);cargarTrazoPiloto(c,1,e.v2);
+        cuerposPiloto[c].setVisible(e.v2!=null);
+        if(e.v2!=null)moverCuerpoPiloto(c,e.v2.puntos.get(e.v2.puntos.size()-1));
+    }
+    rotularPiloto("resultado registrado");
+}
+private void nuevaSimulacionDesdeBotonPiloto() {
+    if(actualizandoInterfazPiloto)return;
+    actualizandoInterfazPiloto=true;reproduciendoPiloto=false;botonNuevaSimulacionPiloto.setEnabled(false);
+    try {int nuevo=agregarSimulacionPiloto(repartoVisualPiloto);mostrarParPiloto(repartoVisualPiloto,nuevo);}
+    finally {actualizandoInterfazPiloto=false;botonNuevaSimulacionPiloto.setEnabled(true);}
+}
+private void cambiarVelocidadPiloto() {
+    velocidadVisualPiloto=velocidadVisualPiloto==1?5:velocidadVisualPiloto==5?10:1;
+    botonVelocidadPiloto.setText("Velocidad ×"+velocidadVisualPiloto);rotularPiloto("velocidad de presentación actualizada");
+}
+private void reiniciarReproduccionPiloto() {
+    for(int c=0;c<2;c++)if(!ejecucionPiloto(repartoVisualPiloto,parVisualPiloto,c).completa()) {
+        rotularPiloto("referencia fallida; consultar diagnóstico");return;
+    }
+    visitaVisualPiloto=1;pasoVisualPiloto=0;reproduciendoPiloto=true;
+    for(int c=0;c<2;c++) {
+        trazosPiloto[c][0].setVisible(false);trazosPiloto[c][1].setVisible(false);
+        moverCuerpoPiloto(c,ejecucionPiloto(repartoVisualPiloto,parVisualPiloto,c).v1.puntos.get(0));
+    }
+    rotularPiloto("reproducción desde la entrada; N mostrado es el total registrado");
+}
+private void avanzarPilotoEstimaciones() {
+    if(!reproduciendoPiloto)return;
+    EjecucionPiloto a=ejecucionPiloto(repartoVisualPiloto,parVisualPiloto,0);
+    int limite=(int)(visitaVisualPiloto==1?a.lObjetivo:a.sObjetivo);
+    pasoVisualPiloto=Math.min(limite,pasoVisualPiloto+PASOS_POR_TICK_PILOTO*velocidadVisualPiloto);
+    for(int c=0;c<2;c++) {
+        EjecucionPiloto e=ejecucionPiloto(repartoVisualPiloto,parVisualPiloto,c);
+        MotorPiloto.Recorrido r=visitaVisualPiloto==1?e.v1:e.v2;int ultimo=0;
+        while(ultimo+1<r.puntos.size()&&r.pasos.get(ultimo+1)<=pasoVisualPiloto)ultimo++;
+        trazosPiloto[c][visitaVisualPiloto-1].setNPoints(ultimo+1);
+        trazosPiloto[c][visitaVisualPiloto-1].setVisible(ultimo>0);moverCuerpoPiloto(c,r.puntos.get(ultimo));
+    }
+    rotularPiloto("reproducción: visita "+visitaVisualPiloto+", paso "+pasoVisualPiloto+"/"+limite+"; N total registrado");
+    if(pasoVisualPiloto==limite) {
+        if(visitaVisualPiloto==1) {
+            visitaVisualPiloto=2;pasoVisualPiloto=0;
+            for(int c=0;c<2;c++)moverCuerpoPiloto(c,ejecucionPiloto(repartoVisualPiloto,parVisualPiloto,c).v2.puntos.get(0));
+        } else mostrarParPiloto(repartoVisualPiloto,parVisualPiloto);
+    }
+}
+
+
+// Coordenadas locales y longitudes en mm.
+private static final class MotorPiloto {
+    static final double PASO_MM = 1.0;
+    static final double TOL_LONGITUD_MM = 1e-8; // Sólo control de suma, no detección geométrica.
+
+    static final class Recorrido {
+        final long semilla;
+        final double objetivoMm;
+        final java.util.ArrayList<double[]> puntos = new java.util.ArrayList<>();
+        final java.util.ArrayList<Integer> pasos = new java.util.ArrayList<>();
+        final java.util.ArrayList<String> tipos = new java.util.ArrayList<>();
+        final java.util.ArrayList<Double> angulos = new java.util.ArrayList<>();
+        final java.util.ArrayList<Double> avances = new java.util.ArrayList<>();
+        double longitudMm;
+        Recorrido(long semilla, double objetivo) { this.semilla = semilla; objetivoMm = objetivo; }
+
+        void agregar(double x, double y, int paso, String tipo, double angulo) {
+            if (!puntos.isEmpty()) {
+                double[] anterior = puntos.get(puntos.size() - 1);
+                double tramo = Math.hypot(x - anterior[0], y - anterior[1]);
+                if (!(tramo > 0) || !Double.isFinite(tramo))
+                    throw new IllegalStateException("Tramo nulo o no finito al registrar recorrido");
+                longitudMm += tramo;
+            }
+            puntos.add(new double[] {x, y});
+            pasos.add(paso); tipos.add(tipo); angulos.add(angulo); avances.add(longitudMm);
+        }
+    }
+
+    static long identificadorFlujo(int tratamiento, int par, int cavidad, int visita) {
+        if(tratamiento<0||tratamiento>1||par<1||cavidad<0||cavidad>1||visita<1||visita>2)
+            throw new IllegalArgumentException("Indices de flujo no validos");
+        if(par<=5)return 20261126L + 100000L * tratamiento + 100L * par + 10L * cavidad + visita;
+        return (1L<<48)|((long)tratamiento<<40)|((long)par<<8)|((long)cavidad<<4)|visita;
+    }
+
+    // Mezcla avalanche fija antes de observar resultados. Evita sembrar Random
+    // directamente con identificadores vecinos, cuyos primeros valores se parecen.
+    static long semilla(int tratamiento, int par, int cavidad, int visita) {
+        long z = identificadorFlujo(tratamiento, par, cavidad, visita) + 0x9E3779B97F4A7C15L;
+        z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9L;
+        z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
+        return z ^ (z >>> 31);
+    }
+
+    static double uniformeInterior(java.util.Random generador) {
+        double u;
+        do { u = generador.nextDouble(); } while (u == 0.0);
+        return u;
+    }
+
+    static Recorrido generar(double ancho, double alto, double objetivo, long semilla, double anchoEntrada) {
+        if (!(ancho > 0 && alto > 0 && objetivo > 0) || !Double.isFinite(ancho + alto + objetivo))
+            throw new IllegalArgumentException("Dimensiones o longitud no válidas");
+        if (!(anchoEntrada > 0 && anchoEntrada <= ancho) || !Double.isFinite(anchoEntrada))
+            throw new IllegalArgumentException("Ancho de entrada no válido");
+        java.util.Random generador = new java.util.Random(semilla);
+        Recorrido r = new Recorrido(semilla, objetivo);
+        double uX = uniformeInterior(generador);
+        uniformeInterior(generador); // Consume el segundo sorteo anterior: conserva el orden de los ángulos.
+        r.agregar((ancho-anchoEntrada)/2.0 + uX*anchoEntrada, alto,
+            0, "origen_entrada", Double.NaN);
+        int pasos = (int) Math.ceil(objetivo / PASO_MM);
+        for (int paso = 1; paso <= pasos; paso++) {
+            double longitudPaso = Math.min(PASO_MM, objetivo - (paso - 1) * PASO_MM);
+            double angulo = generador.nextDouble() * 2.0 * Math.PI;
+            avanzarReflejado(r, ancho, alto, longitudPaso, Math.cos(angulo), Math.sin(angulo), paso, angulo);
+        }
+        if (Math.abs(r.longitudMm - objetivo) > TOL_LONGITUD_MM)
+            throw new IllegalStateException("Longitud recorrida no coincide con el objetivo: " + r.longitudMm);
+        return r;
+    }
+
+    static void avanzarReflejado(Recorrido r, double ancho, double alto, double restante,
+                                 double dx, double dy, int paso, double angulo) {
+        double antes = r.longitudMm;
+        double objetivoPaso = restante;
+        for (int iteracion = 0; restante > 0; iteracion++) {
+            if (iteracion > 12) throw new IllegalStateException("Exceso de reflexiones en un paso");
+            double[] p = r.puntos.get(r.puntos.size() - 1);
+            double tx = dx > 0 ? (ancho - p[0]) / dx : dx < 0 ? -p[0] / dx : Double.POSITIVE_INFINITY;
+            double ty = dy > 0 ? (alto - p[1]) / dy : dy < 0 ? -p[1] / dy : Double.POSITIVE_INFINITY;
+            if (tx < 0 || ty < 0) throw new IllegalStateException("Punto exterior antes de reflejar");
+            double avance = Math.min(restante, Math.min(tx, ty));
+            boolean paredX = tx <= restante && tx <= ty;
+            boolean paredY = ty <= restante && ty <= tx;
+            boolean finPaso = avance == restante;
+            if (avance > 0) {
+                double x = paredX ? (dx > 0 ? ancho : 0.0) : p[0] + dx * avance;
+                double y = paredY ? (dy > 0 ? alto : 0.0) : p[1] + dy * avance;
+                if (!Double.isFinite(x + y) || x < 0 || x > ancho || y < 0 || y > alto)
+                    throw new IllegalStateException("Posición exterior al consumir subtramo");
+                String tipo = paredX || paredY ? (finPaso ? "rebote_fin_paso" : "rebote") : "fin_paso";
+                r.agregar(x, y, paso, tipo, angulo);
+                restante = finPaso ? 0 : restante - avance;
+            }
+            if (paredX) dx = -dx;
+            if (paredY) dy = -dy;
+            if (avance == 0 && !paredX && !paredY)
+                throw new IllegalStateException("Paso sin avance ni pared");
+        }
+        if (Math.abs((r.longitudMm - antes) - objetivoPaso) > TOL_LONGITUD_MM)
+            throw new IllegalStateException("La reflexión alteró la longitud del paso");
+    }
+
+    // El área real y las dimensiones NO son argumentos del estimador.
+    static Double estimar(double lReal, double sReal, int encuentros) {
+        if (!(lReal > 0 && sReal > 0) || encuentros < 0)
+            throw new IllegalArgumentException("Datos no válidos para estimar");
+        if (encuentros == 0) return null;
+        return 2.0 * lReal * sReal / (Math.PI * encuentros);
+    }
+}
+
+
+/** Detector batch de contactos puntuales entre poligonales XY, sin APIs de AnyLogic. */
+private static final class DetectorEncuentrosGenerales {
+    private DetectorEncuentrosGenerales() { }
+
+    /**
+     * Los puntos incluyen los rebotes. Agrupa incidencias por parámetro de V2 y
+     * usa el índice del vértice para compartir t=1/t=0 entre tramos vecinos.
+     * No deduplica coordenadas de visitas posteriores. No usa epsilon geométrico.
+     */
+    public static Resultado contar(java.util.List<double[]> v1, java.util.List<double[]> v2) {
+        try {
+            Punto[] primera = copiar(v1, "V1"), segunda = copiar(v2, "V2");
+            Segmento[] rastro = segmentos(primera), visita = segmentos(segunda);
+            double[] prefijo = new double[segunda.length];
+            for (int j = 0; j < visita.length; j++) {
+                prefijo[j + 1] = prefijo[j] + visita[j].longitud;
+                if (!Double.isFinite(prefijo[j + 1])) throw new IllegalArgumentException("Avance V2 no finito");
+            }
+            java.util.List<Contacto> contactos = new java.util.ArrayList<>();
+            for (int j = 0; j < visita.length; j++) {
+                Segmento s = visita[j];
+                java.util.List<Contacto> incidencias = new java.util.ArrayList<>();
+                for (int i = 0; i < rastro.length; i++) {
+                    Segmento r = rastro[i];
+                    // Rechazo barato antes de construir o multiplicar BigDecimal.
+                    if (s.maxX < r.minX || r.maxX < s.minX || s.maxY < r.minY || r.maxY < s.minY) continue;
+                    Contacto c = interseccion(r, s, i, j);
+                    if (c != null) incidencias.add(c);
+                }
+                incidencias.sort((a, b) -> a.t.comparar(b.t));
+                java.util.List<Contacto> grupos = new java.util.ArrayList<>();
+                for (Contacto c : incidencias) {
+                    if (!grupos.isEmpty() && grupos.get(grupos.size() - 1).t.comparar(c.t) == 0) {
+                        grupos.get(grupos.size() - 1).tramos.addAll(c.tramos);
+                    } else grupos.add(c);
+                }
+                for (Contacto c : grupos) {
+                    if (!contactos.isEmpty() && c.verticeV2 >= 0
+                            && contactos.get(contactos.size() - 1).verticeV2 == c.verticeV2) {
+                        contactos.get(contactos.size() - 1).tramos.addAll(c.tramos);
+                    } else contactos.add(c);
+                }
+            }
+            java.util.List<Evento> eventos = new java.util.ArrayList<>();
+            int cruces = 0, toques = 0, sinClase = 0;
+            for (Contacto c : contactos) {
+                java.util.List<Vector> rayos = rayosLocales(c, primera);
+                Punto entrada, salida;
+                if (c.verticeV2 >= 0) {
+                    entrada = c.verticeV2 > 0 ? segunda[c.verticeV2 - 1] : null;
+                    salida = c.verticeV2 + 1 < segunda.length ? segunda[c.verticeV2 + 1] : null;
+                } else {
+                    entrada = segunda[c.tramoV2];
+                    salida = segunda[c.tramoV2 + 1];
+                }
+                Integer cambio = null;
+                if (entrada != null && salida != null && rayos.size() == 2) {
+                    int a = region(rayos.get(0), rayos.get(1), c.radio(entrada));
+                    int b = region(rayos.get(0), rayos.get(1), c.radio(salida));
+                    if (a != 0 && b != 0) cambio = a != b ? 1 : 0;
+                }
+                String clase;
+                if (cambio == null) { clase = "no_definida"; sinClase++; }
+                else if (cambio == 1) { clase = "cruce"; cruces++; }
+                else { clase = "toque"; toques++; }
+                double avance = c.verticeV2 >= 0 ? prefijo[c.verticeV2]
+                    : prefijo[c.tramoV2] + c.t.valor() * visita[c.tramoV2].longitud;
+                eventos.add(new Evento(eventos.size() + 1, c, avance, clase, cambio,
+                    localizacion(c, rayos, primera, segunda.length)));
+            }
+            return new Resultado(eventos.size(), sinClase == 0 ? Integer.valueOf(cruces) : null,
+                cruces, toques, sinClase, eventos, true, "ok");
+        } catch (IllegalArgumentException | ArithmeticException e) {
+            // -1 nunca representa un cero experimental. El llamador debe exigir completa.
+            return new Resultado(-1, null, 0, 0, 0, new java.util.ArrayList<Evento>(), false, e.getMessage());
+        }
+    }
+
+    private static Punto[] copiar(java.util.List<double[]> lista, String nombre) {
+        if (lista == null || lista.size() < 2) throw new IllegalArgumentException(nombre + ": al menos dos puntos XY");
+        Punto[] puntos = new Punto[lista.size()];
+        for (int i = 0; i < puntos.length; i++) {
+            double[] p = lista.get(i);
+            if (p == null || p.length != 2 || !Double.isFinite(p[0]) || !Double.isFinite(p[1])) {
+                throw new IllegalArgumentException(nombre + ": punto XY no finito o inválido en " + i);
+            }
+            puntos[i] = new Punto(p[0], p[1]);
+            if (i > 0 && p[0] == puntos[i - 1].x && p[1] == puntos[i - 1].y) {
+                throw new IllegalArgumentException(nombre + ": tramo de longitud cero en " + (i - 1));
+            }
+        }
+        return puntos;
+    }
+
+    private static Segmento[] segmentos(Punto[] puntos) {
+        Segmento[] segmentos = new Segmento[puntos.length - 1];
+        for (int i = 0; i < segmentos.length; i++) segmentos[i] = new Segmento(puntos[i], puntos[i + 1]);
+        return segmentos;
+    }
+
+    private static Contacto interseccion(Segmento r, Segmento s, int i, int j) {
+        r.preparar(); s.preparar();
+        Vector distancia = new Vector(r.a.bx().subtract(s.a.bx()), r.a.by().subtract(s.a.by()));
+        java.math.BigDecimal denominador = cruz(s.vector, r.vector);
+        Fraccion t;
+        if (denominador.signum() == 0) {
+            if (cruz(distancia, s.vector).signum() != 0) return null;
+            boolean usarX = Math.abs(s.b.x - s.a.x) >= Math.abs(s.b.y - s.a.y);
+            double sa = usarX ? s.a.x : s.a.y, sb = usarX ? s.b.x : s.b.y;
+            double ra = usarX ? r.a.x : r.a.y, rb = usarX ? r.b.x : r.b.y;
+            double inferior = Math.max(Math.min(sa, sb), Math.min(ra, rb));
+            double superior = Math.min(Math.max(sa, sb), Math.max(ra, rb));
+            if (inferior > superior) return null;
+            if (inferior < superior) throw new IllegalArgumentException(
+                "solapamiento_positivo: V1 tramo " + i + ", V2 tramo " + j);
+            t = new Fraccion(exacto(inferior).subtract(usarX ? s.a.bx() : s.a.by()),
+                usarX ? s.vector.x : s.vector.y);
+        } else {
+            t = new Fraccion(cruz(distancia, r.vector), denominador);
+            Fraccion u = new Fraccion(cruz(distancia, s.vector), denominador);
+            if (!t.enTramo() || !u.enTramo()) return null;
+        }
+        if (!t.enTramo()) return null;
+        return new Contacto(t, s, i, j);
+    }
+
+    private static java.util.List<Vector> rayosLocales(Contacto c, Punto[] puntos) {
+        java.util.List<Vector> rayos = new java.util.ArrayList<>();
+        for (int tramo : c.tramos) {
+            agregarRayo(rayos, c.radio(puntos[tramo]));
+            agregarRayo(rayos, c.radio(puntos[tramo + 1]));
+        }
+        return rayos;
+    }
+    private static void agregarRayo(java.util.List<Vector> rayos, Vector nuevo) {
+        if (nuevo.x.signum() == 0 && nuevo.y.signum() == 0) return;
+        for (Vector anterior : rayos) {
+            if (cruz(anterior, nuevo).signum() == 0 && producto(anterior, nuevo).signum() > 0) return;
+        }
+        rayos.add(nuevo);
+    }
+
+    /** Dos rayos distintos separan el entorno local en dos sectores abiertos. */
+    private static int region(Vector a, Vector b, Vector radio) {
+        int orientacion = cruz(a, b).signum();
+        if (orientacion == 0) {
+            if (producto(a, b).signum() >= 0) return 0;
+            return cruz(a, radio).signum();
+        }
+        Vector u = orientacion > 0 ? a : b, v = orientacion > 0 ? b : a;
+        java.math.BigDecimal cu = cruz(u, radio), cv = cruz(radio, v);
+        // La pertenencia a un rayo real implica solapamiento, ya excluido antes.
+        if ((cu.signum() == 0 && producto(u, radio).signum() > 0)
+                || (cv.signum() == 0 && producto(v, radio).signum() > 0)) return 0;
+        return cu.signum() > 0 && cv.signum() > 0 ? 1 : -1;
+    }
+
+    private static String localizacion(Contacto c, java.util.List<Vector> rayos, Punto[] v1, int nV2) {
+        String lugar = rayos.size() > 2 ? "multirrama" : rayos.size() < 2 ? "un_rayo"
+            : cruz(rayos.get(0), rayos.get(1)).signum() != 0 ? "vertice_giro"
+            : c.tramos.size() > 1 ? "punto_colineal" : "interior_tramo";
+        if (c.esPunto(v1[0]) || c.esPunto(v1[v1.length - 1])) lugar += "+extremo_v1";
+        if (c.verticeV2 == 0) lugar += "+inicio_v2";
+        if (c.verticeV2 == nV2 - 1) lugar += "+final_v2";
+        return lugar;
+    }
+
+    private static java.math.BigDecimal exacto(double x) { return new java.math.BigDecimal(x); }
+    private static java.math.BigDecimal cruz(Vector a, Vector b) { return a.x.multiply(b.y).subtract(a.y.multiply(b.x)); }
+    private static java.math.BigDecimal producto(Vector a, Vector b) { return a.x.multiply(b.x).add(a.y.multiply(b.y)); }
+    private static final class Vector {
+        final java.math.BigDecimal x, y;
+        Vector(java.math.BigDecimal x, java.math.BigDecimal y) { this.x = x; this.y = y; }
+    }
+    private static final class Punto {
+        final double x, y;
+        java.math.BigDecimal ex, ey;
+        Punto(double x, double y) { this.x = x; this.y = y; }
+        java.math.BigDecimal bx() { if (ex == null) ex = exacto(x); return ex; }
+        java.math.BigDecimal by() { if (ey == null) ey = exacto(y); return ey; }
+    }
+    private static final class Segmento {
+        final Punto a, b;
+        final double minX, maxX, minY, maxY, longitud;
+        Vector vector;
+        Segmento(Punto a, Punto b) {
+            this.a = a; this.b = b;
+            minX = Math.min(a.x, b.x); maxX = Math.max(a.x, b.x);
+            minY = Math.min(a.y, b.y); maxY = Math.max(a.y, b.y);
+            longitud = Math.hypot(b.x - a.x, b.y - a.y);
+            if (!Double.isFinite(longitud) || longitud == 0) throw new IllegalArgumentException("Longitud inválida");
+        }
+        void preparar() { if (vector == null) vector = new Vector(b.bx().subtract(a.bx()), b.by().subtract(a.by())); }
+    }
+    private static final class Fraccion {
+        final java.math.BigDecimal n, d;
+        Fraccion(java.math.BigDecimal n, java.math.BigDecimal d) {
+            if (d.signum() == 0) throw new IllegalArgumentException("Denominador geométrico nulo");
+            this.n = d.signum() < 0 ? n.negate() : n;
+            this.d = d.abs();
+        }
+        boolean enTramo() { return n.signum() >= 0 && n.compareTo(d) <= 0; }
+        boolean esCero() { return n.signum() == 0; }
+        boolean esUno() { return n.compareTo(d) == 0; }
+        int comparar(Fraccion otra) { return n.multiply(otra.d).compareTo(otra.n.multiply(d)); }
+        double valor() { return n.divide(d, java.math.MathContext.DECIMAL128).doubleValue(); }
+    }
+    private static final class Contacto {
+        final Fraccion t;
+        final java.math.BigDecimal nx, ny;
+        final int tramoV2, verticeV2;
+        final double x, y;
+        final java.util.TreeSet<Integer> tramos = new java.util.TreeSet<>();
+        Contacto(Fraccion t, Segmento s, int tramoV1, int tramoV2) {
+            this.t = t;
+            this.tramoV2 = tramoV2;
+            verticeV2 = t.esCero() ? tramoV2 : t.esUno() ? tramoV2 + 1 : -1;
+            nx = s.a.bx().multiply(t.d).add(s.vector.x.multiply(t.n));
+            ny = s.a.by().multiply(t.d).add(s.vector.y.multiply(t.n));
+            x = t.esCero() ? s.a.x : t.esUno() ? s.b.x : nx.divide(t.d, java.math.MathContext.DECIMAL128).doubleValue();
+            y = t.esCero() ? s.a.y : t.esUno() ? s.b.y : ny.divide(t.d, java.math.MathContext.DECIMAL128).doubleValue();
+            tramos.add(tramoV1);
+        }
+        Vector radio(Punto p) { return new Vector(p.bx().multiply(t.d).subtract(nx), p.by().multiply(t.d).subtract(ny)); }
+        boolean esPunto(Punto p) { Vector v = radio(p); return v.x.signum() == 0 && v.y.signum() == 0; }
+    }
+
+    public static final class Resultado {
+        public final int nEncuentros;
+        public final Integer cRegiones;
+        public final int crucesClasificados, toquesClasificados, sinClase;
+        public final java.util.List<Evento> eventos;
+        public final boolean completa;
+        public final String diagnostico;
+        private Resultado(int n, Integer c, int cruces, int toques, int sinClase,
+                java.util.List<Evento> eventos, boolean completa, String diagnostico) {
+            nEncuentros = n; cRegiones = c; crucesClasificados = cruces;
+            toquesClasificados = toques; this.sinClase = sinClase;
+            this.eventos = java.util.Collections.unmodifiableList(new java.util.ArrayList<>(eventos));
+            this.completa = completa; this.diagnostico = diagnostico;
+        }
+    }
+    public static final class Evento {
+        public final int episodio;
+        public final double xMm, yMm, avanceMm;
+        public final int indiceTramoV2;
+        public final double parametroV2;
+        public final int[] tramosV1;
+        public final String localizacion, clase;
+        public final Integer cRegion;
+        private Evento(int episodio, Contacto c, double avance, String clase, Integer cambio, String lugar) {
+            this.episodio = episodio; xMm = c.x; yMm = c.y; avanceMm = avance;
+            // En un vértice interior se conserva como referencia canónica el tramo entrante t=1.
+            indiceTramoV2 = c.verticeV2 > 0 ? c.verticeV2 - 1 : c.tramoV2;
+            parametroV2 = c.verticeV2 > 0 ? 1 : c.t.valor();
+            tramosV1 = new int[c.tramos.size()];
+            int k = 0; for (int i : c.tramos) tramosV1[k++] = i;
+            localizacion = lugar; this.clase = clase; cRegion = cambio;
+        }
+    }
+}
+]]></AdditionalClassCode>
+			<StartupCode><![CDATA[iniciarPilotoEstimaciones();]]></StartupCode>
+			<Generic>false</Generic>
+			<GenericParameter>
+				<Id>1795718642163</Id>
+				<Name><![CDATA[1795718642163]]></Name>
+				<GenericParameterValue Class="CodeValue">
+					<Code><![CDATA[T extends Agent]]></Code>
+				</GenericParameterValue>
+				<GenericParameterLabel><![CDATA[Generic parameter:]]></GenericParameterLabel>
+			</GenericParameter>
+			<FlowChartsUsage>ENTITY</FlowChartsUsage>
+			<SamplesToKeep>100</SamplesToKeep>
+			<LimitNumberOfArrayElements>false</LimitNumberOfArrayElements>
+			<ElementsLimitValue>100</ElementsLimitValue>
+			<MakeDefaultViewArea>true</MakeDefaultViewArea>
+			<SceneGridColor/>
+			<SceneBackgroundColor>-4144960</SceneBackgroundColor>
+            <EnvironmentResourceRef></EnvironmentResourceRef>
+            <EnvironmentType>NONE</EnvironmentType>
+            <EnvironmentRotationX>0</EnvironmentRotationX>
+            <EnvironmentRotationY>0</EnvironmentRotationY>
+            <EnvironmentRotationZ>0</EnvironmentRotationZ>
+            <EnvironmentIntensity>1</EnvironmentIntensity>
+			<AgentProperties>
+				<EnvironmentDefinesInitialLocation>true</EnvironmentDefinesInitialLocation>
+				<RotateAnimationTowardsMovement>true</RotateAnimationTowardsMovement>
+				<RotateAnimationVertically>false</RotateAnimationVertically>
+				<VelocityCode Class="CodeUnitValue">
+					<Code><![CDATA[10]]></Code>
+					<Unit Class="SpeedUnits"><![CDATA[MPS]]></Unit>
+				</VelocityCode>
+				<MessageType><![CDATA[Object]]></MessageType>
+				<PhysicalLength Class="CodeUnitValue">
+					<Code><![CDATA[1]]></Code>
+					<Unit Class="LengthUnits"><![CDATA[METER]]></Unit>
+				</PhysicalLength>
+				<PhysicalWidth Class="CodeUnitValue">
+					<Code><![CDATA[1]]></Code>
+					<Unit Class="LengthUnits"><![CDATA[METER]]></Unit>
+				</PhysicalWidth>
+				<PhysicalHeight Class="CodeUnitValue">
+					<Code><![CDATA[1]]></Code>
+					<Unit Class="LengthUnits"><![CDATA[METER]]></Unit>
+				</PhysicalHeight>
+			</AgentProperties>
+			<EnvironmentProperties>
+				<EnableSteps>false</EnableSteps>
+				<StepDurationCode Class="CodeUnitValue">
+					<Code><![CDATA[1.0]]></Code>
+					<Unit Class="TimeUnits"><![CDATA[SECOND]]></Unit>
+				</StepDurationCode>
+				<SpaceType>CONTINUOUS</SpaceType>
+				<WidthCode><![CDATA[500]]></WidthCode>
+				<HeightCode><![CDATA[500]]></HeightCode>
+				<ZHeightCode><![CDATA[0]]></ZHeightCode>
+				<ColumnsCountCode><![CDATA[100]]></ColumnsCountCode>
+				<RowsCountCode><![CDATA[100]]></RowsCountCode>
+				<NeigborhoodType>MOORE</NeigborhoodType>
+				<LayoutType>USER_DEF</LayoutType>
+				<NetworkType>USER_DEF</NetworkType>
+				<ConnectionsPerAgentCode><![CDATA[2]]></ConnectionsPerAgentCode>
+				<ConnectionsRangeCode><![CDATA[50]]></ConnectionsRangeCode>
+				<NeighborLinkFractionCode><![CDATA[0.95]]></NeighborLinkFractionCode>
+				<MCode><![CDATA[10]]></MCode>
+				<LineStyle>SOLID</LineStyle>
+				<LineWidth>1</LineWidth>
+				<LineColor>-16777216</LineColor>
+				<LineZOrder>UNDER_AGENTS</LineZOrder>
+				<LineArrow>NONE</LineArrow>
+				<LineArrowPosition>END</LineArrowPosition>
+			</EnvironmentProperties>
+			<DatasetsCreationProperties>
+				<AutoCreate>true</AutoCreate>
+					<Id>1795718642164</Id>
+					<OccurrenceAtTime>true</OccurrenceAtTime>
+					<OccurrenceDate>1795593600000</OccurrenceDate>
+					<OccurrenceTime Class="CodeUnitValue">
+						<Code><![CDATA[0]]></Code>
+						<Unit Class="TimeUnits"><![CDATA[SECOND]]></Unit>
+					</OccurrenceTime>
+					<RecurrenceCode Class="CodeUnitValue">
+						<Code><![CDATA[1]]></Code>
+						<Unit Class="TimeUnits"><![CDATA[SECOND]]></Unit>
+					</RecurrenceCode>
+			</DatasetsCreationProperties>
+			<ScaleRuler>
+				<Id>1795718642165</Id>
+				<Name><![CDATA[scale]]></Name>
+				<X>0</X><Y>-150</Y>
+				<PublicFlag>false</PublicFlag>
+				<PresentationFlag>false</PresentationFlag>
+				<ShowLabel>false</ShowLabel>
+				<DrawMode>SHAPE_DRAW_2D3D</DrawMode>
+				<Length>100</Length>
+				<Rotation>0</Rotation>
+				<ScaleType>EXPLICITLY_DEFINED</ScaleType>
+				<ModelLength>10</ModelLength>
+				<LengthUnits>METER</LengthUnits>
+				<Scale>10000</Scale>
+				<InheritedFromParentAgentType>true</InheritedFromParentAgentType>
+			</ScaleRuler>
+			<CurrentLevel>1795718642170</CurrentLevel>
+			<Events>
+				<Event>
+					<Id>1795718642166</Id>
+					<Name><![CDATA[pasoMovimiento]]></Name>
+					<X>470</X><Y>460</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>false</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>true</ShowLabel>
+					<Properties TriggerType="timeout" Mode="cyclic">
+						<Timeout Class="CodeUnitValue">
+							<Code><![CDATA[1]]></Code>
+							<Unit Class="TimeUnits"><![CDATA[SECOND]]></Unit>
+						</Timeout>
+						<Rate Class="CodeUnitValue">
+							<Code><![CDATA[1]]></Code>
+							<Unit Class="RateUnits"><![CDATA[PER_SECOND]]></Unit>
+						</Rate>
+						<Id>1795718642167</Id>
+						<OccurrenceAtTime>true</OccurrenceAtTime>
+						<OccurrenceDate>1795680000000</OccurrenceDate>
+						<OccurrenceTime Class="CodeUnitValue">
+							<Code><![CDATA[1]]></Code>
+							<Unit Class="TimeUnits"><![CDATA[SECOND]]></Unit>
+						</OccurrenceTime>
+						<RecurrenceCode Class="CodeUnitValue">
+							<Code><![CDATA[1]]></Code>
+							<Unit Class="TimeUnits"><![CDATA[SECOND]]></Unit>
+						</RecurrenceCode>
+						<Condition><![CDATA[false]]></Condition>
+					</Properties>
+					<Action><![CDATA[avanzarPilotoEstimaciones();]]></Action>
+				</Event>
+			</Events>
+
+			<EmbeddedObjects>
+				<EmbeddedObject>
+					<Id>1795718642168</Id>
+					<Name><![CDATA[exploradora]]></Name>
+					<X>290</X><Y>70</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>false</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>true</ShowLabel>
+					<PresentationId>1795718642173</PresentationId>
+					<ActiveObjectClass>
+						<PackageName><![CDATA[exploradora3dinteractivo]]></PackageName>
+						<ClassName><![CDATA[Exploradora]]></ClassName>
+					</ActiveObjectClass>
+					<GenericParameterSubstitute>
+						<GenericParameterSubstituteReference>
+							<PackageName><![CDATA[exploradora3dinteractivo]]></PackageName>
+							<ClassName><![CDATA[Exploradora]]></ClassName>
+							<ItemName><![CDATA[1795718642176]]></ItemName>
+						</GenericParameterSubstituteReference>
+					</GenericParameterSubstitute>
+					<Parameters>
+					</Parameters>
+					<ReplicationFlag>false</ReplicationFlag>
+					<Replication Class="CodeValue">
+						<Code><![CDATA[100]]></Code>
+					</Replication>
+					<CollectionType>ARRAY_LIST_BASED</CollectionType>
+					<InEnvironment>true</InEnvironment>
+					<InitialLocationType>XYZ</InitialLocationType>
+					<ColumnCode Class="CodeValue">
+						<Code><![CDATA[0]]></Code>
+					</ColumnCode>
+					<RowCode Class="CodeValue">
+						<Code><![CDATA[0]]></Code>
+					</RowCode>
+					<LocationNameCode Class="CodeValue">
+						<Code><![CDATA[""]]></Code>
+					</LocationNameCode>
+					<InitializationType>SPECIFIED_NUMBER</InitializationType>
+					<InitializationDatabaseTableQuery>
+						<Id>1795718642169</Id>
+						<TableReference>
+						</TableReference>
+					</InitializationDatabaseTableQuery>
+					<InitializationDatabaseType>ONE_AGENT_PER_DATABASE_RECORD</InitializationDatabaseType>
+					<QuantityColumn>
+					</QuantityColumn>
+				</EmbeddedObject>
+			</EmbeddedObjects>
+
+			<Presentation>
+				<Level>
+					<Id>1795718642170</Id>
+					<Name><![CDATA[level]]></Name>
+					<X>0</X><Y>0</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>true</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>false</ShowLabel>
+					<DrawMode>SHAPE_DRAW_2D3D</DrawMode>
+					<Z>0</Z>
+					<LevelVisibility>DIM_NON_CURRENT</LevelVisibility>
+
+			<Presentation>
+				<Control Type="Window3D">
+					<Id>1795718642171</Id>
+					<Name><![CDATA[window3d]]></Name>
+					<X>760</X><Y>40</Y>
+					<Width>700</Width>
+					<Height>500</Height>
+					<MakeDefaultViewArea>true</MakeDefaultViewArea>
+					<Label><X>0</X><Y>-10</Y></Label>
+					<ShowLabel>false</ShowLabel>
+					<FollowCamera>false</FollowCamera>
+					<NavigationType>full</NavigationType>
+					<FarClippingDistance>2000</FarClippingDistance>
+				</Control>
+				<Rectangle>
+					<Id>1795718642172</Id>
+					<Name><![CDATA[pisoCavidad]]></Name>
+					<X>0</X><Y>0</Y>
+					<Label><X>10</X><Y>10</Y></Label>
+					<PublicFlag>true</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>false</ShowLabel>
+					<DrawMode>SHAPE_DRAW_2D3D</DrawMode>
+					<EmbeddedIcon>false</EmbeddedIcon>
+					<Z>-2</Z>
+					<ZHeight>2</ZHeight>
+					<LineWidth>1</LineWidth>
+					<LineColor>-16777216</LineColor>
+					<LineMaterial>null</LineMaterial>
+					<LineStyle>SOLID</LineStyle>
+					<Width>250</Width>
+					<Height>350</Height>
+					<Rotation>0.0</Rotation>
+					<FillColor>-7609100</FillColor>
+					<FillMaterial>null</FillMaterial>
+				</Rectangle>
+                <EmbeddedObjectPresentation>
+					<Id>1795718642173</Id>
+					<Name><![CDATA[exploradora_presentation]]></Name>
+					<X>390</X><Y>70</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>true</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>false</ShowLabel>
+					<DrawMode>SHAPE_DRAW_2D3D</DrawMode>
+					<EmbeddedIcon>false</EmbeddedIcon>
+					<Z>0</Z>
+					<Rotation>0.0</Rotation>
+					<ScaleType>AUTOMATICALLY_CALCULATED</ScaleType>
+					<GISScaleForRealEmbeddedObjectPresentationSize>1000</GISScaleForRealEmbeddedObjectPresentationSize>
+					<GISScaleForFixedEmbeddedObjectPresentationSize>1000000000</GISScaleForFixedEmbeddedObjectPresentationSize>
+					<Latitude>0.0</Latitude>
+					<Longitude>0.0</Longitude>
+                </EmbeddedObjectPresentation>
+				<Text>
+					<Id>1795718642174</Id>
+					<Name><![CDATA[rotuloMedidas]]></Name>
+					<X>0</X><Y>600</Y>
+					<Label><X>0</X><Y>-10</Y></Label>
+					<PublicFlag>true</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>false</ShowLabel>
+					<DrawMode>SHAPE_DRAW_2D</DrawMode>
+					<EmbeddedIcon>false</EmbeddedIcon>
+					<Z>0</Z>
+					<Rotation>0.0</Rotation>
+					<Color>-16777216</Color>
+					<Text><![CDATA[25 × 35 mm · A = 875 mm² · 1 mm = 10 px]]></Text>
+					<Font>
+						<Name>SansSerif</Name>
+						<Size>16</Size>
+						<Style>0</Style>
+					</Font>
+					<Alignment>LEFT</Alignment>
+				</Text>
+			</Presentation>
+
+				</Level>
+			</Presentation>
+
+		</ActiveObjectClass>
+		<!--   =========   Active Object Class   ========  -->
+		<ActiveObjectClass>
+			<Id>1795718642175</Id>
+			<Name><![CDATA[Exploradora]]></Name>
+			<Generic>false</Generic>
+			<GenericParameter>
+				<Id>1795718642176</Id>
+				<Name><![CDATA[1795718642176]]></Name>
+				<GenericParameterValue Class="CodeValue">
+					<Code><![CDATA[T extends Agent]]></Code>
+				</GenericParameterValue>
+				<GenericParameterLabel><![CDATA[Generic parameter:]]></GenericParameterLabel>
+			</GenericParameter>
+			<FlowChartsUsage>ENTITY</FlowChartsUsage>
+			<SamplesToKeep>100</SamplesToKeep>
+			<LimitNumberOfArrayElements>false</LimitNumberOfArrayElements>
+			<ElementsLimitValue>100</ElementsLimitValue>
+			<MakeDefaultViewArea>true</MakeDefaultViewArea>
+			<SceneGridColor/>
+			<SceneBackgroundColor>-4144960</SceneBackgroundColor>
+            <EnvironmentResourceRef></EnvironmentResourceRef>
+            <EnvironmentType>NONE</EnvironmentType>
+            <EnvironmentRotationX>0</EnvironmentRotationX>
+            <EnvironmentRotationY>0</EnvironmentRotationY>
+            <EnvironmentRotationZ>0</EnvironmentRotationZ>
+            <EnvironmentIntensity>1</EnvironmentIntensity>
+			<AgentProperties>
+				<EnvironmentDefinesInitialLocation>true</EnvironmentDefinesInitialLocation>
+				<RotateAnimationTowardsMovement>true</RotateAnimationTowardsMovement>
+				<RotateAnimationVertically>false</RotateAnimationVertically>
+				<VelocityCode Class="CodeUnitValue">
+					<Code><![CDATA[10]]></Code>
+					<Unit Class="SpeedUnits"><![CDATA[MPS]]></Unit>
+				</VelocityCode>
+				<MessageType><![CDATA[Object]]></MessageType>
+				<PhysicalLength Class="CodeUnitValue">
+					<Code><![CDATA[1]]></Code>
+					<Unit Class="LengthUnits"><![CDATA[METER]]></Unit>
+				</PhysicalLength>
+				<PhysicalWidth Class="CodeUnitValue">
+					<Code><![CDATA[1]]></Code>
+					<Unit Class="LengthUnits"><![CDATA[METER]]></Unit>
+				</PhysicalWidth>
+				<PhysicalHeight Class="CodeUnitValue">
+					<Code><![CDATA[1]]></Code>
+					<Unit Class="LengthUnits"><![CDATA[METER]]></Unit>
+				</PhysicalHeight>
+			</AgentProperties>
+			<EnvironmentProperties>
+				<EnableSteps>false</EnableSteps>
+				<StepDurationCode Class="CodeUnitValue">
+					<Code><![CDATA[1.0]]></Code>
+					<Unit Class="TimeUnits"><![CDATA[SECOND]]></Unit>
+				</StepDurationCode>
+				<SpaceType>CONTINUOUS</SpaceType>
+				<WidthCode><![CDATA[500]]></WidthCode>
+				<HeightCode><![CDATA[500]]></HeightCode>
+				<ZHeightCode><![CDATA[0]]></ZHeightCode>
+				<ColumnsCountCode><![CDATA[100]]></ColumnsCountCode>
+				<RowsCountCode><![CDATA[100]]></RowsCountCode>
+				<NeigborhoodType>MOORE</NeigborhoodType>
+				<LayoutType>USER_DEF</LayoutType>
+				<NetworkType>USER_DEF</NetworkType>
+				<ConnectionsPerAgentCode><![CDATA[2]]></ConnectionsPerAgentCode>
+				<ConnectionsRangeCode><![CDATA[50]]></ConnectionsRangeCode>
+				<NeighborLinkFractionCode><![CDATA[0.95]]></NeighborLinkFractionCode>
+				<MCode><![CDATA[10]]></MCode>
+				<LineStyle>SOLID</LineStyle>
+				<LineWidth>1</LineWidth>
+				<LineColor>-16777216</LineColor>
+				<LineZOrder>UNDER_AGENTS</LineZOrder>
+				<LineArrow>NONE</LineArrow>
+				<LineArrowPosition>END</LineArrowPosition>
+			</EnvironmentProperties>
+			<DatasetsCreationProperties>
+				<AutoCreate>true</AutoCreate>
+					<Id>1795718642177</Id>
+					<OccurrenceAtTime>true</OccurrenceAtTime>
+					<OccurrenceDate>1795593600000</OccurrenceDate>
+					<OccurrenceTime Class="CodeUnitValue">
+						<Code><![CDATA[0]]></Code>
+						<Unit Class="TimeUnits"><![CDATA[SECOND]]></Unit>
+					</OccurrenceTime>
+					<RecurrenceCode Class="CodeUnitValue">
+						<Code><![CDATA[1]]></Code>
+						<Unit Class="TimeUnits"><![CDATA[SECOND]]></Unit>
+					</RecurrenceCode>
+			</DatasetsCreationProperties>
+			<ScaleRuler>
+				<Id>1795718642178</Id>
+				<Name><![CDATA[scale]]></Name>
+				<X>0</X><Y>-150</Y>
+				<PublicFlag>false</PublicFlag>
+				<PresentationFlag>false</PresentationFlag>
+				<ShowLabel>false</ShowLabel>
+				<DrawMode>SHAPE_DRAW_2D3D</DrawMode>
+				<Length>100</Length>
+				<Rotation>0</Rotation>
+				<ScaleType>EXPLICITLY_DEFINED</ScaleType>
+				<ModelLength>10</ModelLength>
+				<LengthUnits>METER</LengthUnits>
+				<Scale>10000</Scale>
+				<InheritedFromParentAgentType>true</InheritedFromParentAgentType>
+			</ScaleRuler>
+			<CurrentLevel>1795718642180</CurrentLevel>
+
+			<ContainerLinks>
+				<ContainerLink>
+					<Id>1795718642179</Id>
+					<Name><![CDATA[main]]></Name>
+					<X>50</X><Y>-100</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>false</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>true</ShowLabel>
+					<ActiveObjectClass>
+						<PackageName><![CDATA[exploradora3dinteractivo]]></PackageName>
+						<ClassName><![CDATA[Main]]></ClassName>
+					</ActiveObjectClass>
+				</ContainerLink>
+			</ContainerLinks>
+
+			<Presentation>
+				<Level>
+					<Id>1795718642180</Id>
+					<Name><![CDATA[level]]></Name>
+					<X>0</X><Y>0</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>true</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>false</ShowLabel>
+					<DrawMode>SHAPE_DRAW_2D3D</DrawMode>
+					<Z>0</Z>
+					<LevelVisibility>DIM_NON_CURRENT</LevelVisibility>
+
+			<Presentation>
+				<Oval>
+					<Id>1795718642181</Id>
+					<Name><![CDATA[cuerpo]]></Name>
+					<X>0</X><Y>0</Y>
+					<Label><X>0</X><Y>0</Y></Label>
+					<PublicFlag>true</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>false</ShowLabel>
+					<DrawMode>SHAPE_DRAW_2D3D</DrawMode>
+					<EmbeddedIcon>false</EmbeddedIcon>
+					<Z>0</Z>
+					<ZHeight>5</ZHeight>
+					<LineWidth>1</LineWidth>
+					<LineColor>-16777216</LineColor>
+					<LineMaterial>null</LineMaterial>
+					<LineStyle>SOLID</LineStyle>
+					<Circle>false</Circle>
+					<RadiusX>10</RadiusX>
+					<RadiusY>5</RadiusY>
+					<Rotation>0.0</Rotation>
+					<FillColor>-16777216</FillColor>
+					<FillMaterial>null</FillMaterial>
+				</Oval>
+			</Presentation>
+
+				</Level>
+			</Presentation>
+
+		</ActiveObjectClass>
+	</ActiveObjectClasses>
+	<DifferentialEquationsMethod>EULER</DifferentialEquationsMethod>
+	<MixedEquationsMethod>RK45_NEWTON</MixedEquationsMethod>
+	<AlgebraicEquationsMethod>MODIFIED_NEWTON</AlgebraicEquationsMethod>
+	<AbsoluteAccuracy>1.0E-5</AbsoluteAccuracy>
+	<FixedTimeStep>0.001</FixedTimeStep>
+	<RelativeAccuracy>1.0E-5</RelativeAccuracy>
+	<TimeAccuracy>1.0E-5</TimeAccuracy>
+	<Frame>
+		<Id>1795718642182</Id>
+		<Width>1600</Width>
+		<Height>800</Height>
+	</Frame>
+	<Database>
+		<Id>1795718642183</Id>
+		<Logging>false</Logging>
+		<AutoExport>false</AutoExport>
+		<ShutdownCompact>false</ShutdownCompact>
+		<ImportSettings>
+		</ImportSettings>
+		<ExportSettings>
+		</ExportSettings>
+	</Database>
+
+	<RunConfiguration ActiveObjectClassId="1795718642162">
+		<Id>1795718642184</Id>
+		<Name><![CDATA[RunConfiguration]]></Name>
+		<MaximumMemory>512</MaximumMemory>
+		<ModelTimeProperties>
+			<StopOption><![CDATA[Stop at specified time]]></StopOption>
+			<InitialDate><![CDATA[1795478400000]]></InitialDate>	
+			<InitialTime><![CDATA[0.0]]></InitialTime>	
+			<FinalDate><![CDATA[1798070400000]]></FinalDate>	
+			<FinalTime><![CDATA[100.0]]></FinalTime>	
+		</ModelTimeProperties>
+		<AnimationProperties>
+			<StopNever>true</StopNever>
+			<ExecutionMode>realTimeScaled</ExecutionMode>
+			<RealTimeScale>1.0</RealTimeScale>
+			<EnableZoomAndPanning>true</EnableZoomAndPanning>
+			<EnableDeveloperPanel>false</EnableDeveloperPanel>
+			<ShowDeveloperPanelOnStart>false</ShowDeveloperPanelOnStart>
+		</AnimationProperties>
+		<Inputs>		
+		</Inputs>
+		<Outputs>
+		</Outputs>
+	</RunConfiguration>
+	<Experiments>
+		<!--   =========   Simulation Experiment   ========  -->
+		<SimulationExperiment ActiveObjectClassId="1795718642162">
+			<Id>1795718642185</Id>
+			<Name><![CDATA[Simulation]]></Name>
+			<CommandLineArguments><![CDATA[]]></CommandLineArguments>
+			<MaximumMemory>512</MaximumMemory>
+			<RandomNumberGenerationType>fixedSeed</RandomNumberGenerationType>
+			<CustomGeneratorCode>new Random()</CustomGeneratorCode>
+			<SeedValue>1</SeedValue>
+			<SelectionModeForSimultaneousEvents>LIFO</SelectionModeForSimultaneousEvents>
+			<VmArgs><![CDATA[]]></VmArgs>
+			<LoadRootFromSnapshot>false</LoadRootFromSnapshot>
+
+			<Presentation>
+				<Text>
+					<Id>1795718642186</Id>
+					<Name><![CDATA[text]]></Name>
+					<X>50</X><Y>30</Y>
+					<Label><X>10</X><Y>0</Y></Label>
+					<PublicFlag>true</PublicFlag>
+					<PresentationFlag>true</PresentationFlag>
+					<ShowLabel>false</ShowLabel>
+					<DrawMode>SHAPE_DRAW_2D3D</DrawMode>
+					<EmbeddedIcon>false</EmbeddedIcon>
+					<Z>0</Z>
+					<Rotation>0.0</Rotation>
+					<Color>-12490271</Color>
+					<Text><![CDATA[Exploradora3D_Interactivo]]></Text>
+					<Font>
+						<Name>SansSerif</Name>
+						<Size>24</Size>
+						<Style>0</Style>
+					</Font>
+					<Alignment>LEFT</Alignment>
+				</Text>
+			</Presentation>
+
+			<Parameters>
+			</Parameters>
+			<PresentationProperties>
+				<EnableZoomAndPanning>true</EnableZoomAndPanning>
+				<ExecutionMode><![CDATA[realTimeScaled]]></ExecutionMode>
+				<Title><![CDATA[Exploradora3D_Interactivo : Simulation]]></Title>
+				<EnableDeveloperPanel>true</EnableDeveloperPanel>
+				<ShowDeveloperPanelOnStart>false</ShowDeveloperPanelOnStart>
+				<RealTimeScale>1.0</RealTimeScale>
+			</PresentationProperties>
+			<ModelTimeProperties>
+				<StopOption><![CDATA[Never]]></StopOption>
+				<InitialDate><![CDATA[1795478400000]]></InitialDate>
+				<InitialTime><![CDATA[0.0]]></InitialTime>
+				<FinalDate><![CDATA[1798070400000]]></FinalDate>
+				<FinalTime><![CDATA[100.0]]></FinalTime>
+			</ModelTimeProperties>
+			<BypassInitialScreen>true</BypassInitialScreen>
+		</SimulationExperiment>	
+	</Experiments>
+    <RequiredLibraryReference>
+		<LibraryName><![CDATA[com.anylogic.libraries.modules.markup_descriptors]]></LibraryName>
+		<VersionMajor>1</VersionMajor>
+		<VersionMinor>0</VersionMinor>
+		<VersionBuild>0</VersionBuild>
+    </RequiredLibraryReference>
+    <RequiredLibraryReference>
+		<LibraryName><![CDATA[com.anylogic.libraries.processmodeling]]></LibraryName>
+		<VersionMajor>8</VersionMajor>
+		<VersionMinor>0</VersionMinor>
+		<VersionBuild>5</VersionBuild>
+    </RequiredLibraryReference>
+    <RequiredLibraryReference>
+		<LibraryName><![CDATA[com.anylogic.libraries.processmodeling]]></LibraryName>
+		<VersionMajor>8</VersionMajor>
+		<VersionMinor>0</VersionMinor>
+		<VersionBuild>5</VersionBuild>
+    </RequiredLibraryReference>
+</Model>
+<ConvertersApplied>
+	<Uuid>9f7858c9-b2c8-4ead-9244-fd08833f642b</Uuid>
+	<Uuid>404652e6-561a-404c-aab2-ab7415f40ef5</Uuid>
+	<Uuid>6fd6cd57-6dfe-4fc6-be0b-c74065351957</Uuid>
+	<Uuid>3325dc48-3ad4-41e3-836f-dfd0e98fe1ed</Uuid>
+	<Uuid>bb27038a-0f3a-48bb-b235-4a44066a14aa</Uuid>
+	<Uuid>3f69ef3d-706e-41a6-8af0-11658c5eef68</Uuid>
+	<Uuid>3f6fe405-e047-4304-91d6-6eee206d1106</Uuid>
+	<Uuid>820d2b51-5b4a-48e7-b0b6-e46418e3c0f2</Uuid>
+	<Uuid>630818fa-8975-4b70-976f-03180dce01db</Uuid>
+	<Uuid>7c7e471c-004e-495e-a4ad-d840620ab38e</Uuid>
+	<Uuid>3e38ff63-1f70-4ec0-b42c-e879b146785d</Uuid>
+	<Uuid>b1eb86e4-14b3-405c-8257-56b80f1b485d</Uuid>
+	<Uuid>d55f9fb6-86bb-45ea-9db1-79cecfa0ce91</Uuid>
+	<Uuid>ab77aafd-8f02-4354-b789-928d45b1f73c</Uuid>
+	<Uuid>e4f14fd7-1c4a-42e9-b91d-db2415f475db</Uuid>
+	<Uuid>6d208120-6c7a-45a6-b411-402f18890d9b</Uuid>
+	<Uuid>1816cdd0-177c-4973-9e88-dd8b95318556</Uuid>
+	<Uuid>5c23f62f-06dc-46ad-8ead-688ec434e3e5</Uuid>
+	<Uuid>5c7d7990-3f35-41eb-ae16-d0c16098acc6</Uuid>
+	<Uuid>02a16c52-a834-4f30-b6af-a6aee51a294e</Uuid>
+	<Uuid>f0988929-2718-4984-a1b6-c1f2ce152f1f</Uuid>
+	<Uuid>1c9d9cfe-ea2b-43f9-8f62-dc31d8ed3ae1</Uuid>
+	<Uuid>34cb742a-8ba4-47a7-87e6-f2685fe69e97</Uuid>
+	<Uuid>4fe10751-c399-4752-94b7-30113ad45070</Uuid>
+	<Uuid>c13fe5ac-6466-446e-886a-12df1431b1eb</Uuid>
+	<Uuid>714f9ca2-426e-4bff-8569-2d18f58fdcf8</Uuid>
+	<Uuid>045aeb5f-1087-4ac7-9702-a49404e7f7e8</Uuid>
+	<Uuid>840e9a0a-de98-4b7d-a172-f9bbda2d6b98</Uuid>
+	<Uuid>e342358b-75ed-4812-9376-6043fb6cb473</Uuid>
+	<Uuid>f3d5ccdc-1bb3-466f-871d-f6b92a26cbb4</Uuid>
+	<Uuid>59acb6fb-561c-4038-b722-a596a748b3c7</Uuid>
+	<Uuid>be7e6726-05c0-4228-821d-a8df91aeb5bc</Uuid>
+	<Uuid>df4a6a60-9ce8-4c6c-91c0-ad5a5d732259</Uuid>
+	<Uuid>47491eb9-4606-42bd-8399-125a2b95fded</Uuid>
+	<Uuid>9b2d1306-5d19-439a-8f2c-b144dd7e22fa</Uuid>
+	<Uuid>ef421152-8732-4f97-9acb-c8e9a6890d5e</Uuid>
+	<Uuid>d48f8080-25b1-44f5-8322-7bf2712ff974</Uuid>
+	<Uuid>6c4de826-daad-4cd4-b703-51dfe803e822</Uuid>
+	<Uuid>01af22d6-6889-4e98-a3df-e6eddc40fc92</Uuid>
+	<Uuid>ea3b3dbe-cca2-4bde-957b-feaef7e18789</Uuid>
+	<Uuid>e737c8c6-b526-4f88-b89e-554e205b0614</Uuid>
+	<Uuid>efd24e87-d7f7-425f-9cb0-3ee17c7b2116</Uuid>
+	<Uuid>a62607e6-047e-4910-a1ec-5426bf9283b5</Uuid>
+	<Uuid>64dceb5b-de05-47c7-8e40-e9b293e80d75</Uuid>
+	<Uuid>8d51c652-6aee-4de8-ba03-47b289a13ec5</Uuid>
+	<Uuid>51d7b5ce-5664-4750-b1a0-fabcdc31e49a</Uuid>
+	<Uuid>6522e3af-aa9e-421c-b667-e11db73cd8ca</Uuid>
+	<Uuid>9ac073a0-7abf-4dff-826f-9c44d4780590</Uuid>
+	<Uuid>2da9c21c-adc7-405a-a36e-46fbd9dfcd42</Uuid>
+	<Uuid>fe4d1053-9c84-4221-bac7-cb489a7064ff</Uuid>
+	<Uuid>1f005f88-e6d7-4bdc-81fa-3acf4c89cf64</Uuid>
+	<Uuid>42dc5a7c-d7b1-4653-92b9-9359b46cc2d4</Uuid>
+	<Uuid>e25721a9-34f9-479c-a4c3-31f5ec9e117d</Uuid>
+	<Uuid>506d1de3-06df-4131-9e88-e43f1768e3d8</Uuid>
+	<Uuid>e6625695-25a2-43d0-9056-1e9a1a594b1e</Uuid>
+	<Uuid>91990287-4edf-4e38-aa6c-66d0e906807b</Uuid>
+	<Uuid>2216cdd0-177c-5678-9e88-dd8b95312234</Uuid>
+	<Uuid>1737c8c6-b526-4dd8-589e-ee4e205b06f4</Uuid>
+	<Uuid>6a43bef6-8b70-4253-a828-82c3ab399655</Uuid>
+	<Uuid>0a27038a-0f3a-48bb-b235-4a44066a1402</Uuid>
+	<Uuid>0a9ec2c3-5e18-4c0a-a183-fd86d9d9a08b</Uuid>
+	<Uuid>2216cdd0-177c-5678-9e88-dd8b95313334</Uuid>
+	<Uuid>92afa9c7-cb47-45df-8559-1b947cbeacee</Uuid>
+	<Uuid>896f4ff2-c039-43e1-8c65-183592ba63e2</Uuid>
+	<Uuid>eada5e9c-56b7-4492-b3b1-03f1eb36a209</Uuid>
+	<Uuid>2216cdd0-177c-5678-9e88-dd8b95313335</Uuid>
+	<Uuid>5b8ebeed-6b58-4c3a-8d5f-0958b1a90ce6</Uuid>
+	<Uuid>c39ae7a6-edcf-4673-923a-96829a5df80c</Uuid>
+	<Uuid>af233c46-2e37-4dd0-a79f-cc6184140b1c</Uuid>
+	<Uuid>53a0a65d-9a11-4cd9-8e3a-c6852af4d6e3</Uuid>
+	<Uuid>01593659-ae66-4c89-b2b6-9a95d1c1f509</Uuid>
+</ConvertersApplied>
+</AnyLogicWorkspace>

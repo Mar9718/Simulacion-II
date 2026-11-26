@@ -60,6 +60,21 @@ En este cuaderno desarrollo la media y la varianza de $\int_0^t W_s^2\,ds$ y com
 
 Uso **100 000 trayectorias**, **1000 subintervalos** y **semilla 42**.
 
+## Modelos en AnyLogic
+
+### Exploración y estimación de cavidades
+
+Se presenta una exploradora que realiza dos visitas a cada cavidad, registra los encuentros con su primer recorrido y estima el área mediante sus longitudes y ese conteo. El modelo incluye vistas en planta y en 3D, entradas designadas, generación de nuevos pares y exportación de resultados.
+
+- [Reporte de avance, método, gráficas y datos](anylogic/exploracion_cavidades/README.md).
+- [Carpeta del modelo para abrir en AnyLogic](anylogic/exploracion_cavidades/modelo_anylogic/).
+- [Descargar el proyecto de AnyLogic para revisión](anylogic/exploracion_cavidades/entrega/Proyecto_AnyLogic.zip).
+- [Informe de avance en PDF](anylogic/exploracion_cavidades/documentos/Avance_2026-11-26.pdf).
+
+La versión actual utiliza **AnyLogic 8.9.10 PLE**, cavidades de **875 y 1750 mm²** y **5000 mm por cavidad**, con repartos **25/75** y **50/50**. El conjunto inicial conserva **cinco pares por reparto**: se obtuvieron **4/5** y **3/5 aciertos**, respectivamente. El reporte separa ese conjunto de los pares añadidos después y del antecedente con 1000 mm e inicio interior. Son resultados exploratorios: el cambio de distancia también cambia el lugar de inicio y no demuestra la superioridad general de un reparto.
+
+Para revisar el proyecto se descarga la carpeta o el archivo ZIP, se abre `Exploradora3D_Interactivo.alp` y se ejecuta `Simulation`. Las instrucciones y las condiciones de uso de AnyLogic acompañan al modelo. La entrega corresponde a una actividad docente de Simulación II.
+
 ## Ejecución
 
 Trabajo con **Python y NumPy**. Para las gráficas de Metropolis-Hastings en dos dimensiones uso **Pillow**; en la caminata sobre el grafo uso **Matplotlib** y calculo las combinaciones con **SciPy**.
@@ -94,4 +109,4 @@ Durante el muestreo aparece una barra por cadena. En **Visual Studio Code** abro
 
 Las gráficas y los conteos describen las simulaciones obtenidas. La tasa de aceptación, el descarte de pasos iniciales y la apariencia de las gráficas, por sí solos, no demuestran convergencia ni independencia entre los estados.
 
-En el SIR con PyMC, los diagnósticos de las cadenas respaldan los resúmenes de la posterior bajo los supuestos elegidos. Los residuos y las réplicas permiten examinar el ajuste a esos mismos datos; no constituyen una evaluación con observaciones nuevas. El notebook identifica el código adaptado y declara el apoyo de IA utilizado.
+En el SIR con PyMC, los diagnósticos de las cadenas respaldan los resúmenes de la posterior bajo los supuestos elegidos. Los residuos y las réplicas permiten examinar el ajuste a esos mismos datos; no constituyen una evaluación con observaciones nuevas. El notebook identifica el código adaptado.

@@ -1,0 +1,7 @@
+# Conservar los bytes de datos exportados, modelo y acuerdo de uso.
+*.csv -text
+*.alp -text
+*.txt -text
+*.png binary
+*.pdf binary
+*.zip binary

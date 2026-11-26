@@ -1,0 +1,11 @@
+id_serie,reparto,par,id_pequena,id_grande,N_pequena,N_grande,A_estimada_pequena_mm2,A_estimada_grande_mm2,estado_estimacion_pequena,estado_estimacion_grande,clasificacion,estado
+piloto_13200428210619069794,25/75,1,t0_p1_pequena,t0_p1_grande,164,0,727.8427275543994,,finita,sin_estimacion_finita_N0,acierto,completo
+piloto_13200428210619069794,25/75,2,t0_p2_pequena,t0_p2_grande,389,244,306.8540033905437,489.205767700498,finita,finita,acierto,completo
+piloto_13200428210619069794,25/75,3,t0_p3_pequena,t0_p3_grande,0,0,,,sin_estimacion_finita_N0,sin_estimacion_finita_N0,empate,completo
+piloto_13200428210619069794,25/75,4,t0_p4_pequena,t0_p4_grande,0,0,,,sin_estimacion_finita_N0,sin_estimacion_finita_N0,empate,completo
+piloto_13200428210619069794,25/75,5,t0_p5_pequena,t0_p5_grande,0,0,,,sin_estimacion_finita_N0,sin_estimacion_finita_N0,empate,completo
+piloto_13200428210619069794,50/50,1,t1_p1_pequena,t1_p1_grande,18,0,8841.941282883074,,finita,sin_estimacion_finita_N0,acierto,completo
+piloto_13200428210619069794,50/50,2,t1_p2_pequena,t1_p2_grande,88,289,1808.5788987715384,550.7091456466967,finita,finita,inversion,completo
+piloto_13200428210619069794,50/50,3,t1_p3_pequena,t1_p3_grande,12,0,13262.91192432461,,finita,sin_estimacion_finita_N0,acierto,completo
+piloto_13200428210619069794,50/50,4,t1_p4_pequena,t1_p4_grande,115,0,1383.9560268860464,,finita,sin_estimacion_finita_N0,acierto,completo
+piloto_13200428210619069794,50/50,5,t1_p5_pequena,t1_p5_grande,44,16,3617.1577975430764,9947.183943243459,finita,finita,acierto,completo

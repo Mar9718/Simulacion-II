@@ -1,0 +1,3 @@
+id_serie,reparto,par,id_pequena,id_grande,N_pequena,N_grande,A_estimada_pequena_mm2,A_estimada_grande_mm2,estado_estimacion_pequena,estado_estimacion_grande,clasificacion,estado
+interactivo_17202165414256589681,25/75,6,t0_p6_pequena,t0_p6_grande,2278,109,1309.989105782721,27377.570485991168,finita,finita,acierto,completo
+interactivo_17202165414256589681,25/75,7,t0_p7_pequena,t0_p7_grande,3091,3834,965.4335758566926,778.3399016622425,finita,finita,inversion,completo

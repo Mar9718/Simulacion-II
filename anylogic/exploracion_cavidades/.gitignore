@@ -1,0 +1,9 @@
+# Resultados de nuevas sesiones y archivos generados al abrir el modelo.
+modelo_anylogic/resultados/
+**/.metadata/
+**/.settings/
+**/classes/
+**/*.class
+**/__pycache__/
+**/*.pyc
+**/*.alp.bak
