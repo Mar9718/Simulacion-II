@@ -60,6 +60,15 @@ En este cuaderno desarrollo la media y la varianza de $\int_0^t W_s^2\,ds$ y com
 
 Uso **100 000 trayectorias**, **1000 subintervalos** y **semilla 42**.
 
+### 7. Ecuación de Black–Scholes
+
+En este cuaderno transformo la ecuación de Black–Scholes en la ecuación del calor y utilizo la fórmula de Green para calcular el precio de una opción europea de compra. Desarrollo los cambios de variable con SymPy y comparo el precio obtenido con la fórmula final y con la integral.
+
+- [Ver el notebook en GitHub](notebooks/actividad_04.ipynb).
+- [Abrir el notebook en Google Colab](https://colab.research.google.com/github/Mar9718/Simulacion-II/blob/main/notebooks/actividad_04.ipynb).
+
+Para el ejercicio de IBM uso **precio actual 58.5**, **precio de ejercicio 60**, **volatilidad anual 0.29**, **tasa de interés anual 0.04** y **0.3 años hasta el vencimiento**. La acción no paga dividendos. Obtengo un precio de **3.34886389501**, aproximadamente **3.35 unidades monetarias**; la fórmula y la integral coinciden a la precisión mostrada.
+
 ## Modelos en AnyLogic
 
 ### Exploración y estimación de cavidades
@@ -80,6 +89,15 @@ Para revisar el proyecto se descarga la carpeta o el archivo ZIP, se abre `Explo
 Trabajo con **Python y NumPy**. Para las gráficas de Metropolis-Hastings en dos dimensiones uso **Pillow**; en la caminata sobre el grafo uso **Matplotlib** y calculo las combinaciones con **SciPy**.
 
 Para la actividad de integral estocástica uso **NumPy**, **Matplotlib**, **Numba** e **IPython**.
+
+Para la actividad de Black–Scholes uso **SymPy 1.14.0** e **IPython 9.17.1**, con **Python 3.12**. En un entorno virtual activo, instalo las bibliotecas y abro JupyterLab:
+
+```bash
+python -m pip install sympy==1.14.0 ipython==9.17.1 jupyterlab
+python -m jupyterlab
+```
+
+Abro `notebooks/actividad_04.ipynb` y ejecuto las celdas de arriba hacia abajo desde un kernel limpio. El cuaderno incluye los datos y las salidas del cálculo. La ejecución completa se comprobó en el entorno local; la ejecución en Colab no se ha verificado.
 
 En el SIR con Metropolis-Hastings uso **SciPy** para resolver las ecuaciones, **pandas** para las tablas y **Matplotlib** para las gráficas.
 
